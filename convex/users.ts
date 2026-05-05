@@ -42,6 +42,44 @@ export const createUser = internalMutation({
   },
 });
 
+export const syncUser = mutation({
+  args: {
+    clerkId: v.optional(v.string()),
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let identity = await ctx.auth.getUserIdentity();
+    
+    const subject = identity?.subject || args.clerkId;
+    if (!subject) {
+      throw new Error("Called syncUser without authentication or clerkId present");
+    }
+
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", subject))
+      .unique();
+
+    if (existing) {
+      return existing._id;
+    }
+
+    return await ctx.db.insert("users", {
+      clerkId: subject,
+      name: identity?.name || args.name || "User",
+      email: identity?.email || args.email || "",
+      createdAt: Date.now(),
+      settings: {
+        currency: "IDR",
+        tone: "neutral",
+        timezone: "Asia/Jakarta",
+        reminderMinutesBefore: 30,
+      },
+    });
+  },
+});
+
 export const getUserSettings = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {

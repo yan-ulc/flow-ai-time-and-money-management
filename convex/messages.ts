@@ -35,6 +35,7 @@ export const insertMessage = mutation({
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
     toolsUsed: v.optional(v.array(v.string())),
+    toolResults: v.optional(v.array(v.any())),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("messages", {
@@ -42,6 +43,7 @@ export const insertMessage = mutation({
       role: args.role,
       content: args.content,
       toolsUsed: args.toolsUsed,
+      toolResults: args.toolResults,
       createdAt: Date.now(),
     });
   },

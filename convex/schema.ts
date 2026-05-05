@@ -30,6 +30,7 @@ export default defineSchema({
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
     toolsUsed: v.optional(v.array(v.string())),  // ["manage_finance", "manage_schedule"]
+    toolResults: v.optional(v.array(v.any())),   // parallel results array
     metadata: v.optional(v.object({
       tokensUsed: v.optional(v.number()),
       model: v.optional(v.string()),

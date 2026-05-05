@@ -8,18 +8,18 @@ export const getSchedules = query({
     rangeEnd: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    let q = ctx.db
-      .query("schedules")
-      .withIndex("by_userId_dateTime", (q) => q.eq("userId", args.userId));
-      
-    if (args.rangeStart !== undefined) {
-      q = q.filter((q) => q.gte(q.field("dateTime"), args.rangeStart!));
-    }
-    if (args.rangeEnd !== undefined) {
-      q = q.filter((q) => q.lte(q.field("dateTime"), args.rangeEnd!));
-    }
+    const rangeStart = args.rangeStart ?? 0;
+    const rangeEnd = args.rangeEnd ?? 9999999999999;
 
-    return await q.order("asc").collect();
+    const schedules = await ctx.db
+      .query("schedules")
+      .withIndex("by_userId_dateTime", (q) =>
+        q.eq("userId", args.userId).gte("dateTime", rangeStart).lte("dateTime", rangeEnd)
+      )
+      .order("asc")
+      .collect();
+
+    return schedules;
   },
 });
 

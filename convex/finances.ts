@@ -8,18 +8,18 @@ export const getFinances = query({
     rangeEnd: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    let q = ctx.db
-      .query("finances")
-      .withIndex("by_userId_date", (q) => q.eq("userId", args.userId));
-      
-    if (args.rangeStart !== undefined) {
-      q = q.filter((q) => q.gte(q.field("date"), args.rangeStart!));
-    }
-    if (args.rangeEnd !== undefined) {
-      q = q.filter((q) => q.lte(q.field("date"), args.rangeEnd!));
-    }
+    const rangeStart = args.rangeStart ?? 0;
+    const rangeEnd = args.rangeEnd ?? 9999999999999;
 
-    return await q.order("desc").collect();
+    const finances = await ctx.db
+      .query("finances")
+      .withIndex("by_userId_date", (q) =>
+        q.eq("userId", args.userId).gte("date", rangeStart).lte("date", rangeEnd)
+      )
+      .order("desc")
+      .collect();
+
+    return finances;
   },
 });
 
