@@ -18,6 +18,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "FlowAi",
   description: "Track your money and time via chat.",
+  manifest: "/manifest.json",
+  themeColor: "#7c3aed",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "FlowAi",
+  },
 };
 
 export default function RootLayout({

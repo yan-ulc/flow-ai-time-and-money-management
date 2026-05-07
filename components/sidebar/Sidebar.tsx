@@ -3,10 +3,13 @@
 import React from "react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { CalendarMini } from "./CalendarMini";
-import { Zap } from "lucide-react";
+import { Zap, Bell, BellOff } from "lucide-react";
+import { useNotification } from "@/hooks/useNotification";
+import { Button } from "@/components/ui/button";
 
 export function Sidebar() {
   const { user } = useUser();
+  const { isSupported, isSubscribed, permission, subscribe, unsubscribe } = useNotification();
 
   return (
     <div className="flex flex-col h-full p-4 gap-6">
@@ -19,7 +22,30 @@ export function Sidebar() {
         <CalendarMini />
       </div>
 
-      <div className="mt-auto border-t pt-4">
+      <div className="mt-auto border-t pt-4 space-y-3">
+        {isSupported && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+            onClick={isSubscribed ? unsubscribe : subscribe}
+          >
+            {isSubscribed ? (
+              <>
+                <Bell className="h-4 w-4 text-primary" />
+                <span className="text-xs">Notifications On</span>
+              </>
+            ) : (
+              <>
+                <BellOff className="h-4 w-4" />
+                <span className="text-xs">
+                  {permission === "denied" ? "Notifications Blocked" : "Enable Notifications"}
+                </span>
+              </>
+            )}
+          </Button>
+        )}
+
         <div className="flex items-center gap-3 px-2">
           <UserButton />
           <div className="flex flex-col">

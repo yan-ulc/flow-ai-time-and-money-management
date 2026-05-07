@@ -10,9 +10,13 @@
 
 import type * as actions_chat from "../actions/chat.js";
 import type * as actions_llm from "../actions/llm.js";
+import type * as actions_notifications from "../actions/notifications.js";
+import type * as crons from "../crons.js";
 import type * as finances from "../finances.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
+import type * as notifications from "../notifications.js";
+import type * as push_subscriptions from "../push_subscriptions.js";
 import type * as schedules from "../schedules.js";
 import type * as tools_financeTools from "../tools/financeTools.js";
 import type * as tools_index from "../tools/index.js";
@@ -28,9 +32,13 @@ import type {
 declare const fullApi: ApiFromModules<{
   "actions/chat": typeof actions_chat;
   "actions/llm": typeof actions_llm;
+  "actions/notifications": typeof actions_notifications;
+  crons: typeof crons;
   finances: typeof finances;
   http: typeof http;
   messages: typeof messages;
+  notifications: typeof notifications;
+  push_subscriptions: typeof push_subscriptions;
   schedules: typeof schedules;
   "tools/financeTools": typeof tools_financeTools;
   "tools/index": typeof tools_index;
