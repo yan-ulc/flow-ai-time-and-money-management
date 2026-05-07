@@ -60,18 +60,52 @@ export const processChat = action({
       content: cleanMessage,
     });
 
-    // Build context
-    const CONTEXT_MAX = 20;
-    const contextMessages = recentMessages.slice(0, CONTEXT_MAX).reverse().map((m: any) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    // Build context - Trim to last 5 messages to save tokens
+    const CONTEXT_MAX = 5;
+    const contextMessages: any[] = [];
+    
+    // Sort chronological: oldest first, newest last
+    const sortedRecent = recentMessages.slice(0, CONTEXT_MAX).reverse();
+    for (const m of sortedRecent) {
+      contextMessages.push({ 
+        role: m.role, 
+        content: m.content || "" 
+      });
+    }
+    
     contextMessages.push({ role: "user", content: cleanMessage });
 
-    const currentDateTime = new Date().toLocaleString("en-US", {
-      timeZone: args.deviceTimezone || user.settings.timezone || "Asia/Jakarta",
+    // Fetch Current State (Balance & Upcoming) to inject into System Prompt
+    // This reduces the need for the AI to call get_life_status repeatedly
+    const currentState = await ctx.runQuery(internal.tools.financeTools.getLifeStatusData, {
+      userId: user._id,
+      rangeDays: 7
     });
-    const systemPrompt = buildSystemPrompt(user.settings, currentDateTime, user.name);
+
+    const nowMs = Date.now();
+    const timeZone = args.deviceTimezone || user.settings.timezone || "Asia/Jakarta";
+    const humanTime = new Date(nowMs).toLocaleString("id-ID", { 
+      timeZone, 
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', 
+      hour: '2-digit', minute: '2-digit' 
+    });
+    
+    const currentDateTime = `
+- Unix Timestamp (ms): ${nowMs}
+- Local Time: ${humanTime}
+- Timezone: ${timeZone}
+    `.trim();
+
+    const stateBlock = `
+## CURRENT USER STATE (PRE-FETCHED)
+- Total Spent (Actual): IDR ${currentState.totalSpent.toLocaleString()}
+- Total Income (Actual): IDR ${currentState.totalIncome.toLocaleString()}
+- Upcoming/Planned Costs: IDR ${currentState.upcomingCosts.toLocaleString()}
+- Upcoming Schedules Count: ${currentState.upcomingSchedulesCount}
+- Net Balance (Actual): IDR ${(currentState.totalIncome - currentState.totalSpent).toLocaleString()}
+`.trim();
+
+    const systemPrompt = `${buildSystemPrompt(user.settings, currentDateTime, user.name)}\n\n${stateBlock}\n\n## INSTRUCTIONS\n1. TOOL-FIRST: If the user wants to record an expense, income, or schedule, you MUST call the appropriate tool(s) IMMEDIATELY. Do NOT just acknowledge in text without calling the tool.\n2. ACTIONABLE: For the message "${cleanMessage}", identify if it contains financial or scheduling data and call tools.\n3. PRE-FETCHED STATE: Use the state above for context (e.g., current balance), but if the user asks for a detailed summary or report, you should still call get_life_status.`;
 
     // Call LLM
     let response;
@@ -101,7 +135,16 @@ export const processChat = action({
         const tc = toolCalls[i];
         if (tc.function.name !== "manage_schedule") continue;
         
-        const fnArgs = JSON.parse(tc.function.arguments);
+        const rawArgs = JSON.parse(tc.function.arguments);
+        // Coerce numeric strings to actual numbers to satisfy Convex validators
+        const numericFields = ["amount", "date", "dateTime", "rangeDays", "duration", "estimatedCost", "scheduledAt"];
+        const fnArgs = { ...rawArgs };
+        for (const field of numericFields) {
+          if (typeof fnArgs[field] === "string" && !isNaN(Number(fnArgs[field]))) {
+            fnArgs[field] = Number(fnArgs[field]);
+          }
+        }
+
         try {
           const result = await ctx.runMutation(internal.tools.scheduleTools.manageSchedule, {
             userId: user._id, ...fnArgs
@@ -120,7 +163,14 @@ export const processChat = action({
       for (let i = 0; i < toolCalls.length; i++) {
         if (resultMap[i] !== undefined) continue;
         const tc = toolCalls[i];
-        const fnArgs = JSON.parse(tc.function.arguments);
+        const rawArgs = JSON.parse(tc.function.arguments);
+        const numericFields = ["amount", "date", "dateTime", "rangeDays", "duration", "estimatedCost", "scheduledAt"];
+        const fnArgs = { ...rawArgs };
+        for (const field of numericFields) {
+          if (typeof fnArgs[field] === "string" && !isNaN(Number(fnArgs[field]))) {
+            fnArgs[field] = Number(fnArgs[field]);
+          }
+        }
         
         try {
           switch (tc.function.name) {

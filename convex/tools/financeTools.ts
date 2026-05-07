@@ -26,7 +26,7 @@ export const manageFinance = internalMutation({
         type,
         category,
         description: args.description || "",
-        status: args.status || "actual",
+        status: args.status || (args.date && args.date > Date.now() ? "planned" : "actual"),
         date: args.date || Date.now(),
         relatedScheduleId: args.relatedScheduleId,
         createdAt: Date.now(),
