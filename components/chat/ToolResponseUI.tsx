@@ -1,14 +1,17 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
-import { Wallet, CalendarClock, Activity, Bell } from "lucide-react";
+import { formatCurrency, cn } from "@/lib/utils";
+import { Wallet, CalendarClock, Activity, Bell, Check, X, AlertTriangle, Clock, MapPin, Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface ToolResponseUIProps {
   toolName: string;
   toolResult?: any;
+  onSendMessage?: (content: string) => void;
 }
 
-export function ToolResponseUI({ toolName, toolResult }: ToolResponseUIProps) {
+export function ToolResponseUI({ toolName, toolResult, onSendMessage }: ToolResponseUIProps) {
   // If we don't have the actual result yet (during optimistic update), just show a loading/action chip
   if (!toolResult) {
     return (
@@ -116,6 +119,100 @@ export function ToolResponseUI({ toolName, toolResult }: ToolResponseUIProps) {
           <Bell className="h-3 w-3" /> Reminder set
         </div>
       );
+
+    case "request_confirmation": {
+      const payload = toolResult.payload;
+      const isSchedule = payload.action_type.includes("schedule");
+      const isDelete = payload.action_type.includes("delete");
+      const isUpdate = payload.action_type.includes("update");
+
+      const handleApprove = () => onSendMessage?.("oke lanjut");
+      const handleReject = () => onSendMessage?.("batal");
+
+      return (
+        <Card className={cn(
+          "w-full max-w-sm border-2 overflow-hidden",
+          isDelete ? "border-destructive/30 bg-destructive/5" : "border-primary/30 bg-primary/5"
+        )}>
+          <CardHeader className={cn(
+            "p-3 pb-2 flex flex-row items-center gap-2 space-y-0",
+            isDelete ? "bg-destructive/10" : "bg-primary/10"
+          )}>
+            <div className={cn(
+              "rounded-full p-1.5",
+              isDelete ? "bg-destructive/20 text-destructive" : "bg-primary/20 text-primary"
+            )}>
+              {isSchedule ? <CalendarClock className="h-4 w-4" /> : <Wallet className="h-4 w-4" />}
+            </div>
+            <CardTitle className="text-sm font-bold uppercase tracking-tight">
+              {isDelete ? "Konfirmasi Hapus" : isUpdate ? "Konfirmasi Ubah" : "Konfirmasi Simpan"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-3">
+            {/* Main Info */}
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold leading-tight">
+                {isSchedule ? payload.title : payload.finance_description || payload.category}
+              </h3>
+              
+              <div className="grid gap-1.5">
+                {/* Time/Date */}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{isSchedule ? payload.dateTime_wib_label : payload.date_wib_label}</span>
+                </div>
+
+                {/* Amount/Cost */}
+                {(payload.amount || payload.estimated_cost) && (
+                  <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                    <Tag className="h-3.5 w-3.5" />
+                    <span>{formatCurrency(payload.amount || payload.estimated_cost)}</span>
+                    <Badge variant="outline" className="text-[10px] py-0 h-4 ml-1">
+                      {payload.finance_type === "income" ? "Pemasukan" : "Pengeluaran"}
+                    </Badge>
+                  </div>
+                )}
+
+                {/* Location */}
+                {payload.location && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span>{payload.location}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Warning */}
+            {payload.warning && (
+              <div className="flex items-start gap-2 rounded-md bg-amber-500/10 p-2 text-[11px] text-amber-700 border border-amber-500/20">
+                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>{payload.warning}</span>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+              <Button 
+                size="sm" 
+                className="flex-1 h-8 text-xs gap-1.5"
+                onClick={handleApprove}
+              >
+                <Check className="h-3.5 w-3.5" /> Konfirmasi
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="flex-1 h-8 text-xs gap-1.5 border-muted-foreground/20"
+                onClick={handleReject}
+              >
+                <X className="h-3.5 w-3.5" /> Batal
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
 
     default:
       return (

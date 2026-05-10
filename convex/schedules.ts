@@ -16,6 +16,7 @@ export const getSchedules = query({
       .withIndex("by_userId_dateTime", (q) =>
         q.eq("userId", args.userId).gte("dateTime", rangeStart).lte("dateTime", rangeEnd)
       )
+      .filter((q) => q.neq(q.field("status"), "cancelled")) // exclude soft-deleted
       .order("asc")
       .collect();
 
@@ -42,7 +43,6 @@ export const insertSchedule = mutation({
       estimatedCost: args.estimatedCost,
       location: args.location,
       status: args.status,
-      createdAt: Date.now(),
       updatedAt: Date.now(),
     });
   },

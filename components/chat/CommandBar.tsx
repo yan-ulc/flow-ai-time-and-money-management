@@ -20,7 +20,7 @@ export function CommandBar({ onSendMessage, isLoading }: CommandBarProps) {
   };
 
   return (
-    <div className="p-4 bg-background border-t">
+    <div className="p-4">
       <form 
         onSubmit={handleSubmit}
         className="max-w-3xl mx-auto relative flex items-center"

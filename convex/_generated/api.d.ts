@@ -14,6 +14,7 @@ import type * as actions_notifications from "../actions/notifications.js";
 import type * as crons from "../crons.js";
 import type * as finances from "../finances.js";
 import type * as http from "../http.js";
+import type * as lib_timeUtils from "../lib/timeUtils.js";
 import type * as messages from "../messages.js";
 import type * as notifications from "../notifications.js";
 import type * as push_subscriptions from "../push_subscriptions.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   finances: typeof finances;
   http: typeof http;
+  "lib/timeUtils": typeof lib_timeUtils;
   messages: typeof messages;
   notifications: typeof notifications;
   push_subscriptions: typeof push_subscriptions;

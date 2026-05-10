@@ -31,7 +31,6 @@ export const createUser = internalMutation({
       clerkId: args.clerkId,
       name: args.name,
       email: args.email,
-      createdAt: Date.now(),
       settings: {
         currency: "IDR",
         tone: "neutral",
@@ -69,7 +68,6 @@ export const syncUser = mutation({
       clerkId: subject,
       name: identity?.name || args.name || "User",
       email: identity?.email || args.email || "",
-      createdAt: Date.now(),
       settings: {
         currency: "IDR",
         tone: "neutral",

@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Menu, TrendingUp, Zap } from "lucide-react";
 import { Sidebar } from "./sidebar/Sidebar";
 import { InsightPanel } from "./insight/InsightPanel";
+import Image from "next/image";
 
 export function MobileHeader() {
   return (
@@ -23,7 +24,13 @@ export function MobileHeader() {
       </Sheet>
 
       <div className="flex items-center gap-2 font-bold text-lg tracking-tight">
-        <Zap className="h-5 w-5 text-primary fill-primary" />
+        <Image 
+          src="/icon-192.png" 
+          alt="Logo" 
+          width={24} 
+          height={24} 
+          className="rounded shadow-sm"
+        />
         <span>FlowAi</span>
       </div>
 

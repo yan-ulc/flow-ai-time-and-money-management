@@ -13,9 +13,10 @@ export const getFinances = query({
 
     const finances = await ctx.db
       .query("finances")
-      .withIndex("by_userId_date", (q) =>
-        q.eq("userId", args.userId).gte("date", rangeStart).lte("date", rangeEnd)
+      .withIndex("by_userId_dateTime", (q) =>
+        q.eq("userId", args.userId).gte("dateTime", rangeStart).lte("dateTime", rangeEnd)
       )
+      .filter((q) => q.neq(q.field("status"), "cancelled")) // exclude soft-deleted
       .order("desc")
       .collect();
 
@@ -30,9 +31,9 @@ export const insertFinance = mutation({
     type: v.union(v.literal("expense"), v.literal("income")),
     category: v.string(),
     description: v.string(),
-    status: v.union(v.literal("planned"), v.literal("actual")),
+    status: v.union(v.literal("planned"), v.literal("actual"), v.literal("cancelled")),
     relatedScheduleId: v.optional(v.id("schedules")),
-    date: v.number(),
+    dateTime: v.number(),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("finances", {
@@ -43,8 +44,7 @@ export const insertFinance = mutation({
       description: args.description,
       status: args.status,
       relatedScheduleId: args.relatedScheduleId,
-      date: args.date,
-      createdAt: Date.now(),
+      dateTime: args.dateTime,
       updatedAt: Date.now(),
     });
   },
@@ -58,8 +58,8 @@ export const updateFinance = mutation({
       type: v.optional(v.union(v.literal("expense"), v.literal("income"))),
       category: v.optional(v.string()),
       description: v.optional(v.string()),
-      status: v.optional(v.union(v.literal("planned"), v.literal("actual"))),
-      date: v.optional(v.number()),
+      status: v.optional(v.union(v.literal("planned"), v.literal("actual"), v.literal("cancelled"))),
+      dateTime: v.optional(v.number()),
     }),
   },
   handler: async (ctx, args) => {

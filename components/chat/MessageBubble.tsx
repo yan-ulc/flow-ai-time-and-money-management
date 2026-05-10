@@ -3,13 +3,14 @@ import { cn } from "@/lib/utils";
 import { ToolResponseUI } from "./ToolResponseUI";
 
 interface MessageBubbleProps {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "tool";
   content: string;
   toolsUsed?: string[];
   toolResults?: any[];
+  onSendMessage?: (content: string) => void;
 }
 
-export function MessageBubble({ role, content, toolsUsed, toolResults }: MessageBubbleProps) {
+export function MessageBubble({ role, content, toolsUsed, toolResults, onSendMessage }: MessageBubbleProps) {
   const isUser = role === "user";
 
   return (
@@ -29,6 +30,7 @@ export function MessageBubble({ role, content, toolsUsed, toolResults }: Message
                 key={idx} 
                 toolName={tool} 
                 toolResult={toolResults ? toolResults[idx] : undefined} 
+                onSendMessage={onSendMessage}
               />
             ))}
           </div>

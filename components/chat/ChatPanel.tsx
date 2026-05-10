@@ -9,6 +9,7 @@ import { MessageBubble } from "./MessageBubble";
 import { CommandBar } from "./CommandBar";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import Image from "next/image";
 
 export function ChatPanel() {
   const { user } = useUser();
@@ -79,12 +80,18 @@ export function ChatPanel() {
 
   return (
     <div className="flex flex-col h-full bg-background relative">
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-32">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="max-w-3xl mx-auto flex flex-col justify-end min-h-full">
           {messages?.length === 0 && !optimisticMessage && (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-4 opacity-60">
-              <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4 text-2xl">
-                ✨
+              <div className="h-16 w-16 mb-4">
+                <Image 
+                  src="/icon-192.png" 
+                  alt="FlowAi Logo" 
+                  width={64} 
+                  height={64} 
+                  className="rounded-2xl shadow-lg"
+                />
               </div>
               <h2 className="text-xl font-semibold mb-2">Welcome to FlowAi</h2>
               <p className="max-w-md text-muted-foreground">
@@ -94,13 +101,14 @@ export function ChatPanel() {
             </div>
           )}
 
-          {messages?.map((msg) => (
+          {messages?.filter(msg => msg.role !== "tool").map((msg) => (
             <MessageBubble 
               key={msg._id}
               role={msg.role}
               content={msg.content}
               toolsUsed={msg.toolsUsed}
               toolResults={(msg as any).toolResults}
+              onSendMessage={handleSendMessage}
             />
           ))}
 
@@ -122,7 +130,7 @@ export function ChatPanel() {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/90 to-transparent pt-6">
+      <div className="border-t bg-background/80 backdrop-blur-md sticky bottom-0">
         <CommandBar onSendMessage={handleSendMessage} isLoading={isLoading} />
       </div>
     </div>
