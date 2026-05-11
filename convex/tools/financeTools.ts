@@ -1,55 +1,75 @@
 import { internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
+import { validateAiDateTime } from "../lib/timeUtils";
 
 // Tool Executors - manageFinance
 export const manageFinance = internalMutation({
   args: {
     userId: v.id("users"),
     action: v.string(),
-    financeId: v.optional(v.id("finances")),
+    financeId: v.optional(v.string()),
     amount: v.optional(v.number()),
     type: v.optional(v.union(v.literal("expense"), v.literal("income"))),
     category: v.optional(v.string()),
     description: v.optional(v.string()),
-    status: v.optional(v.union(v.literal("planned"), v.literal("actual"))),
-    date: v.optional(v.number()),
-    relatedScheduleId: v.optional(v.id("schedules")),
+    status: v.optional(v.union(v.literal("planned"), v.literal("actual"), v.literal("cancelled"))),
+    dateTime: v.optional(v.number()),
+    relatedScheduleId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const now = Date.now();
+    const financeId = args.financeId ? (ctx.db.normalizeId("finances", args.financeId) ?? undefined) : undefined;
+    const relatedScheduleId = args.relatedScheduleId ? (ctx.db.normalizeId("schedules", args.relatedScheduleId) ?? undefined) : undefined;
+
     if (args.action === "create") {
-      const amount = args.amount ?? 0;
-      const type = args.type ?? "expense";
-      const category = args.category ?? "other";
-      return await ctx.db.insert("finances", {
+      if (!args.dateTime) throw new Error("Missing dateTime for create finance");
+      
+      // Validate dateTime coming from AI to catch temporal drift
+      const validation = validateAiDateTime(args.dateTime, now, { allowPast: true, maxFutureDays: 730 });
+      if (!validation.valid) {
+        throw new Error(`Invalid dateTime: ${validation.error}${validation.corrected ? ` (did you mean ${validation.corrected}?)` : ""}`);
+      }
+      
+      const id = await ctx.db.insert("finances", {
         userId: args.userId,
-        amount,
-        type,
-        category,
+        amount: args.amount ?? 0,
+        type: args.type ?? "expense",
+        category: args.category ?? "other",
         description: args.description || "",
-        status: args.status || (args.date && args.date > Date.now() ? "planned" : "actual"),
-        date: args.date || Date.now(),
-        relatedScheduleId: args.relatedScheduleId,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        status: args.status || (args.dateTime > now ? "planned" : "actual"),
+        dateTime: args.dateTime, // NO DEFAULT
+        relatedScheduleId: relatedScheduleId,
+        updatedAt: now,
       });
-    } else if (args.action === "update") {
-      if (!args.financeId) throw new Error("Missing financeId for update");
-      const updates: any = {};
-      if (args.amount !== undefined) updates.amount = args.amount;
-      if (args.type !== undefined) updates.type = args.type;
-      if (args.category !== undefined) updates.category = args.category;
-      if (args.description !== undefined) updates.description = args.description;
-      if (args.status !== undefined) updates.status = args.status;
-      if (args.date !== undefined) updates.date = args.date;
-      if (args.relatedScheduleId !== undefined) updates.relatedScheduleId = args.relatedScheduleId;
-      updates.updatedAt = Date.now();
-      await ctx.db.patch(args.financeId, updates);
-      return args.financeId;
-    } else if (args.action === "delete") {
-      if (!args.financeId) throw new Error("Missing financeId for delete");
-      await ctx.db.delete(args.financeId);
-      return "deleted";
+      return { success: true, financeId: id };
     }
+
+    if (args.action === "update") {
+      if (!financeId) throw new Error("financeId is required for update");
+      await ctx.db.patch(financeId, {
+        ...(args.amount !== undefined && { amount: args.amount }),
+        ...(args.type !== undefined && { type: args.type }),
+        ...(args.category !== undefined && { category: args.category }),
+        ...(args.description !== undefined && { description: args.description }),
+        ...(args.status !== undefined && { status: args.status }),
+        ...(args.dateTime !== undefined && { dateTime: args.dateTime }),
+        ...(relatedScheduleId !== undefined && { relatedScheduleId }),
+        updatedAt: now,
+      });
+      return { success: true, financeId: financeId };
+    }
+
+    if (args.action === "delete") {
+      if (!financeId) throw new Error("financeId is required for delete");
+      // SOFT-DELETE
+      await ctx.db.patch(financeId, {
+        status: "cancelled",
+        updatedAt: now,
+      });
+      return { success: true, deleted: financeId };
+    }
+
+    return { success: false, error: "Unknown action" };
   },
 });
 
@@ -63,15 +83,14 @@ export const checkAffordabilityData = internalQuery({
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
-    // simplified: check total actual income - total actual expense - total planned expense
-    // this month for example
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
     const finances = await ctx.db
       .query("finances")
-      .withIndex("by_userId_date", (q) => q.eq("userId", args.userId).gte("date", startOfMonth.getTime()))
+      .withIndex("by_userId_dateTime", (q) => q.eq("userId", args.userId).gte("dateTime", startOfMonth.getTime()))
+      .filter((q) => q.neq(q.field("status"), "cancelled"))
       .collect();
 
     let balance = 0;
@@ -105,21 +124,23 @@ export const checkAffordabilityData = internalQuery({
 export const getLifeStatusData = internalQuery({
   args: {
     userId: v.id("users"),
-    rangeDays: v.number(),
+    rangeDays: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const rangeDays = args.rangeDays ?? 7;
     const now = Date.now();
-    const startRange = now - args.rangeDays * 24 * 60 * 60 * 1000;
-    const endRange = now + args.rangeDays * 24 * 60 * 60 * 1000;
+    const startRange = now - rangeDays * 24 * 60 * 60 * 1000;
 
     const finances = await ctx.db
       .query("finances")
-      .withIndex("by_userId_date", (q) => q.eq("userId", args.userId).gte("date", startRange))
+      .withIndex("by_userId_dateTime", (q) => q.eq("userId", args.userId).gte("dateTime", startRange))
+      .filter((q) => q.neq(q.field("status"), "cancelled"))
       .collect();
 
     const schedules = await ctx.db
       .query("schedules")
       .withIndex("by_userId_dateTime", (q) => q.eq("userId", args.userId).gte("dateTime", startRange))
+      .filter((q) => q.neq(q.field("status"), "cancelled"))
       .collect();
 
     let totalSpent = 0;
@@ -128,7 +149,7 @@ export const getLifeStatusData = internalQuery({
     let upcomingSchedules = 0;
 
     for (const f of finances) {
-      if (f.date <= now) {
+      if (f.dateTime <= now) {
         if (f.type === "expense") totalSpent += f.amount;
         if (f.type === "income") totalIncome += f.amount;
       } else {
@@ -137,15 +158,31 @@ export const getLifeStatusData = internalQuery({
     }
 
     for (const s of schedules) {
-      if (s.dateTime > now) upcomingSchedules++;
+      if (s.dateTime > now && s.status === "upcoming") upcomingSchedules++;
     }
+
+    const user = await ctx.db.get(args.userId);
+    const timeZone = user?.settings?.timezone || "Asia/Jakarta";
+
+    const formatDateTime = (ms: number) => new Date(ms).toLocaleString("id-ID", { 
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', 
+      hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+      timeZone
+    });
 
     return {
       totalSpent,
       totalIncome,
       upcomingCosts,
       upcomingSchedulesCount: upcomingSchedules,
-      recentSchedules: schedules.filter(s => s.dateTime > now).slice(0, 5) // top 5 upcoming
+      recentSchedules: schedules.sort((a, b) => b.dateTime - a.dateTime).slice(0, 10).map(s => ({
+        ...s,
+        readableDateTime: formatDateTime(s.dateTime)
+      })),
+      recentFinances: finances.sort((a, b) => b.dateTime - a.dateTime).slice(0, 10).map(f => ({
+        ...f,
+        readableDate: formatDateTime(f.dateTime)
+      }))
     };
   },
 });

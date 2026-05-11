@@ -28,7 +28,7 @@ export function PlannedExpensesCard() {
 
   const now = Date.now();
   const plannedExpenses = finances.filter(
-    (f) => f.status === "planned" && f.type === "expense" && f.date >= now
+    (f) => f.status === "planned" && f.type === "expense" && f.dateTime >= now
   );
 
   if (plannedExpenses.length === 0) {
@@ -59,7 +59,7 @@ export function PlannedExpensesCard() {
       
       <div className="space-y-1">
         {plannedExpenses.slice(0, 5).map((expense) => {
-          const date = new Date(expense.date);
+          const date = new Date(expense.dateTime);
           let dayLabel = format(date, "MMM d");
           if (isToday(date)) dayLabel = "Today";
           else if (isTomorrow(date)) dayLabel = "Tomorrow";

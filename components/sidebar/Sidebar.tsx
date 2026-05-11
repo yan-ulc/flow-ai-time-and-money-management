@@ -6,6 +6,7 @@ import { CalendarMini } from "./CalendarMini";
 import { Zap, Bell, BellOff } from "lucide-react";
 import { useNotification } from "@/hooks/useNotification";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export function Sidebar() {
   const { user } = useUser();
@@ -14,7 +15,13 @@ export function Sidebar() {
   return (
     <div className="flex flex-col h-full p-4 gap-6">
       <div className="flex items-center gap-2 font-bold text-xl tracking-tight px-2 py-1">
-        <Zap className="h-6 w-6 text-primary fill-primary" />
+        <Image 
+          src="/icon-192.png" 
+          alt="FlowAi Logo" 
+          width={32} 
+          height={32} 
+          className="rounded-lg shadow-sm"
+        />
         <span>FlowAi</span>
       </div>
 

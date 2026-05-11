@@ -41,7 +41,6 @@ export const upsert = mutation({
       endpoint: args.endpoint,
       keys: args.keys,
       deviceInfo: args.deviceInfo,
-      createdAt: Date.now(),
     });
   },
 });

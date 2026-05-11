@@ -4,7 +4,9 @@ import React from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
-import { format, isToday, isTomorrow } from "date-fns";
+import { format, isToday, isTomorrow, startOfDay } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 
 export function CalendarMini() {
   const { user } = useUser();
@@ -26,12 +28,15 @@ export function CalendarMini() {
     );
   }
 
-  // Filter client-side: upcoming in the next 30 days (wide window to catch all AI-created events)
+  // Filter client-side: items from today midnight onwards (wide window)
   const now = Date.now();
+  const todayStart = startOfDay(now).getTime();
   const windowEnd = now + 30 * 24 * 60 * 60 * 1000;
-  const schedules = allSchedules.filter(
-    (s) => s.dateTime >= now && s.dateTime <= windowEnd && s.status === "upcoming"
-  );
+  
+  const schedules = allSchedules.filter((s) => {
+    const isVisibleStatus = s.status === "upcoming" || (s.status === "done" && isToday(s.dateTime));
+    return s.dateTime >= todayStart && s.dateTime <= windowEnd && isVisibleStatus;
+  });
 
   return (
     <div className="space-y-4">
@@ -52,9 +57,20 @@ export function CalendarMini() {
             else if (isTomorrow(date)) dayLabel = "Tomorrow";
 
             return (
-              <div key={schedule._id} className="group flex flex-col p-2.5 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border/50">
+              <div key={schedule._id} className={cn(
+                "group flex flex-col p-2.5 rounded-lg transition-colors border border-transparent hover:border-border/50",
+                schedule.status === "done" ? "opacity-60 bg-muted/30" : "hover:bg-muted/50"
+              )}>
                 <div className="flex justify-between items-start mb-1">
-                  <span className="text-sm font-medium leading-none">{schedule.title}</span>
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    {schedule.status === "done" && <Check className="h-3 w-3 text-emerald-600 shrink-0" />}
+                    <span className={cn(
+                      "text-sm font-medium leading-none truncate",
+                      schedule.status === "done" && "line-through decoration-muted-foreground/50"
+                    )}>
+                      {schedule.title}
+                    </span>
+                  </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                     {format(date, "HH:mm")}
                   </span>

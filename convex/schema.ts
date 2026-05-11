@@ -8,7 +8,6 @@ export default defineSchema({
     clerkId: v.string(),             // Unique Clerk user ID
     name: v.string(),
     email: v.string(),
-    createdAt: v.number(),           // Unix timestamp ms
     settings: v.object({
       monthlyBudget: v.optional(v.number()),   // In IDR (rupiah)
       currency: v.string(),          // Default "IDR"
@@ -21,14 +20,17 @@ export default defineSchema({
       reminderMinutesBefore: v.number(), // Default 30
     }),
   })
-  .index("by_clerkId", ["clerkId"])  // ← CRITICAL untuk auth lookup
+  .index("by_clerkId", ["clerkId"])
   .index("by_email", ["email"]),
 
   // ─── MESSAGES ────────────────────────────────────────────
-  messages: defineTable({
+    messages: defineTable({
     userId: v.id("users"),
-    role: v.union(v.literal("user"), v.literal("assistant")),
+    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("tool")),
     content: v.string(),
+    toolCalls: v.optional(v.array(v.any())),     // Raw tool call objects from LLM
+    toolCallId: v.optional(v.string()),         // For role: "tool" messages
+    name: v.optional(v.string()),               // For role: "tool" messages
     toolsUsed: v.optional(v.array(v.string())),  // ["manage_finance", "manage_schedule"]
     toolResults: v.optional(v.array(v.any())),   // parallel results array
     metadata: v.optional(v.object({
@@ -36,10 +38,8 @@ export default defineSchema({
       model: v.optional(v.string()),
       latencyMs: v.optional(v.number()),
     })),
-    createdAt: v.number(),
   })
-  .index("by_userId", ["userId"])
-  .index("by_userId_createdAt", ["userId", "createdAt"]),  // ← untuk pagination
+  .index("by_userId", ["userId"]),
 
   // ─── FINANCES ────────────────────────────────────────────
   finances: defineTable({
@@ -50,15 +50,15 @@ export default defineSchema({
     description: v.string(),
     status: v.union(
       v.literal("planned"),          // Future, belum terjadi
-      v.literal("actual")            // Sudah terjadi
+      v.literal("actual"),           // Sudah terjadi
+      v.literal("cancelled")         // Soft-delete
     ),
     relatedScheduleId: v.optional(v.id("schedules")),  // Link ke schedule
-    date: v.number(),                // Target date (Unix ms) — beda dari createdAt
-    createdAt: v.number(),
+    dateTime: v.number(),            // Target date (Unix ms) — renamed for consistency
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_userId_date", ["userId", "date"])           // ← untuk range queries
+  .index("by_userId_dateTime", ["userId", "dateTime"])
   .index("by_userId_status", ["userId", "status"])
   .index("by_userId_category", ["userId", "category"]),
 
@@ -75,11 +75,10 @@ export default defineSchema({
       v.literal("done"),
       v.literal("cancelled")
     ),
-    createdAt: v.number(),
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_userId_dateTime", ["userId", "dateTime"])   // ← untuk calendar queries
+  .index("by_userId_dateTime", ["userId", "dateTime"])
   .index("by_userId_status", ["userId", "status"]),
 
   // ─── NOTIFICATIONS ───────────────────────────────────────
@@ -91,10 +90,9 @@ export default defineSchema({
     scheduledAt: v.number(),         // When to send (Unix ms)
     sentAt: v.optional(v.number()), // Null until sent
     sent: v.boolean(),
-    createdAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_sent_scheduledAt", ["sent", "scheduledAt"]), // ← CRITICAL untuk cron job
+  .index("by_sent_scheduledAt", ["sent", "scheduledAt"]),
 
   // ─── PUSH SUBSCRIPTIONS ──────────────────────────────────
   push_subscriptions: defineTable({
@@ -105,9 +103,8 @@ export default defineSchema({
       auth: v.string(),
     }),
     deviceInfo: v.optional(v.string()),  // Browser/OS info
-    createdAt: v.number(),
   })
   .index("by_userId", ["userId"])
-  .index("by_endpoint", ["endpoint"]),  // ← untuk de-duplicate subscriptions
+  .index("by_endpoint", ["endpoint"]),
 
 });
