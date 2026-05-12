@@ -69,17 +69,23 @@ export default defineSchema({
     dateTime: v.number(),            // Unix ms, start time
     duration: v.number(),            // Duration in minutes, default 60
     estimatedCost: v.optional(v.number()),
+    actualCost: v.optional(v.number()),
+    financialTransactionId: v.optional(v.id("finances")),
     location: v.optional(v.string()),
     status: v.union(
       v.literal("upcoming"),
+      v.literal("pending_confirmation"),
+      v.literal("completed"),
       v.literal("done"),
+      v.literal("missed"),
       v.literal("cancelled")
     ),
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"])
   .index("by_userId_dateTime", ["userId", "dateTime"])
-  .index("by_userId_status", ["userId", "status"]),
+  .index("by_userId_status", ["userId", "status"])
+  .index("by_status_dateTime", ["status", "dateTime"]),
 
   // ─── NOTIFICATIONS ───────────────────────────────────────
   notifications: defineTable({

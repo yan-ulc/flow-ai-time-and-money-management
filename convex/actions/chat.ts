@@ -134,8 +134,8 @@ export const processChat = action({
     // STRICT MODE VALIDATION
     // If LLM says "Done" or acknowledges intent but calls NO tools, and the message looks transactional
     const transactionalKeywords = [
-      "makan", "beli", "bayar", "income", "pengeluaran", "jadwal", "futsal", "besok", "jam", "pukul", "rp", "idr",
-      "hapus", "delete", "cancel", "batal", "ubah", "ganti", "edit", "update", "set"
+      "makan", "beli", "bayar", "income", "pengeluaran", "jadwal", "futsal", "besok", "jam", "pukul", "rp", "idr", "gaji", "income", "spent", "spending", "budget", "reminder", "ingetin",
+      "hapus", "delete", "cancel", "batal", "ubah", "ganti", "edit", "update", "set", "baru", "bikin", "buat", "record", "catat", "tambah"
     ];
     const hasTransactionalIntent = transactionalKeywords.some(k => cleanMessage.toLowerCase().includes(k));
     
@@ -145,11 +145,11 @@ export const processChat = action({
       response = await callLLM({
         messages: [
           ...contextMessages,
-          { role: "assistant", content: choice.message.content || "I will help with that." },
-          { role: "user", content: "You forgot to call the tool for my request. Please call the appropriate tool (manage_finance, manage_schedule, or get_life_status) with precise UTC milliseconds (set minutes/seconds to :00)." }
+          { role: "assistant", content: choice.message.content || "I am processing your request." },
+          { role: "user", content: "CRITICAL: You failed to call a tool. If the user wants to record, change, or delete something, you MUST call a tool (manage_finance, manage_schedule, or request_confirmation). Do NOT respond with text only." }
         ],
         tools: toolDefinitions,
-        systemPrompt: systemPrompt + "\n\nCRITICAL: You MUST call a tool now. Do not reply with text only. For time, ALWAYS use :00:00 minutes/seconds unless specified."
+        systemPrompt: systemPrompt + "\n\nCRITICAL: TOOL CALL REQUIRED. DO NOT REPLY WITH TEXT. Use the pre-computed timestamps from the tables."
       });
       const retryChoice = response.choices[0];
       if (!retryChoice.message.tool_calls || retryChoice.message.tool_calls.length === 0) {
@@ -318,7 +318,7 @@ export const processChat = action({
       const finalResponse = await callLLM({
         messages: contextMessages,
         tools: toolDefinitions,
-        systemPrompt: systemPrompt + "\n\nCRITICAL: Respond using natural language as specified in the OUTPUT FORMAT. Never output raw JSON or tool results as your final reply.",
+        systemPrompt: systemPrompt + "\n\nCRITICAL: Check the tool results carefully. If the tool result contains an error or does NOT return an ID (e.g., scheduleId, financeId), you MUST reply with 'Gagal menyimpan ke database' and explain why. NEVER say 'Tersimpan' or 'Done' if it failed. Respond using natural language. Never output raw JSON.",
       });
 
       const reply = finalResponse.choices[0].message.content || "";

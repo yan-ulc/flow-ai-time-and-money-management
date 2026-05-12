@@ -8,7 +8,7 @@ import { useUser } from "@clerk/nextjs";
 import { MessageBubble } from "./MessageBubble";
 import { CommandBar } from "./CommandBar";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import Image from "next/image";
 
 export function ChatPanel() {
@@ -79,7 +79,7 @@ export function ChatPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background relative">
+    <div className="flex flex-col h-full bg-transparent relative">
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="max-w-3xl mx-auto flex flex-col justify-end min-h-full">
           {messages?.length === 0 && !optimisticMessage && (
@@ -117,21 +117,28 @@ export function ChatPanel() {
           )}
 
           {isLoading && (
-            <div className="flex justify-start mb-6 w-full">
-              <div className="bg-muted rounded-2xl rounded-bl-none px-5 py-3 text-sm text-muted-foreground flex gap-1 items-center">
-                <span className="animate-bounce">●</span>
-                <span className="animate-bounce" style={{ animationDelay: "0.2s" }}>●</span>
-                <span className="animate-bounce" style={{ animationDelay: "0.4s" }}>●</span>
+            <div className="flex w-full mb-8 justify-start">
+              <div className="flex gap-4 w-full max-w-3xl">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border shadow-sm bg-primary/10 border-primary/20 text-primary">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="flex items-center gap-1.5 pt-2 text-muted-foreground">
+                  <span className="animate-bounce w-1.5 h-1.5 bg-current rounded-full" />
+                  <span className="animate-bounce w-1.5 h-1.5 bg-current rounded-full" style={{ animationDelay: "0.2s" }} />
+                  <span className="animate-bounce w-1.5 h-1.5 bg-current rounded-full" style={{ animationDelay: "0.4s" }} />
+                </div>
               </div>
             </div>
           )}
           
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-24" /> {/* Spacer for floating input */}
         </div>
       </div>
 
-      <div className="border-t bg-background/80 backdrop-blur-md sticky bottom-0">
-        <CommandBar onSendMessage={handleSendMessage} isLoading={isLoading} />
+      <div className="absolute bottom-4 md:bottom-8 left-0 right-0 px-4 pointer-events-none z-20 flex justify-center">
+        <div className="w-full max-w-3xl pointer-events-auto">
+          <CommandBar onSendMessage={handleSendMessage} isLoading={isLoading} />
+        </div>
       </div>
     </div>
   );

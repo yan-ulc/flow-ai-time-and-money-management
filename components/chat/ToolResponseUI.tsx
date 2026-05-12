@@ -152,23 +152,23 @@ export function ToolResponseUI({ toolName, toolResult, onSendMessage }: ToolResp
             {/* Main Info */}
             <div className="space-y-2">
               <h3 className="text-base font-semibold leading-tight">
-                {isSchedule ? payload.title : payload.finance_description || payload.category}
+                {isSchedule ? payload.title : payload.description || payload.category}
               </h3>
               
               <div className="grid gap-1.5">
                 {/* Time/Date */}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>{isSchedule ? payload.dateTime_wib_label : payload.date_wib_label}</span>
+                  <span>{payload.dateTime_wib_label || "Waktu saat ini"}</span>
                 </div>
 
                 {/* Amount/Cost */}
-                {(payload.amount || payload.estimated_cost) && (
+                {(payload.amount || payload.estimatedCost) && (
                   <div className="flex items-center gap-2 text-xs font-medium text-foreground">
                     <Tag className="h-3.5 w-3.5" />
-                    <span>{formatCurrency(payload.amount || payload.estimated_cost)}</span>
+                    <span>{formatCurrency(payload.amount || payload.estimatedCost)}</span>
                     <Badge variant="outline" className="text-[10px] py-0 h-4 ml-1">
-                      {payload.finance_type === "income" ? "Pemasukan" : "Pengeluaran"}
+                      {payload.type === "income" ? "Pemasukan" : "Pengeluaran"}
                     </Badge>
                   </div>
                 )}

@@ -1,6 +1,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { ToolResponseUI } from "./ToolResponseUI";
+import { User, Sparkles } from "lucide-react";
 
 interface MessageBubbleProps {
   role: "user" | "assistant" | "tool";
@@ -14,33 +15,50 @@ export function MessageBubble({ role, content, toolsUsed, toolResults, onSendMes
   const isUser = role === "user";
 
   return (
-    <div className={cn("flex w-full mb-6", isUser ? "justify-end" : "justify-start")}>
-      <div
-        className={cn(
-          "max-w-[80%] rounded-2xl px-5 py-3",
-          isUser
-            ? "bg-primary text-primary-foreground rounded-br-none"
-            : "bg-muted text-foreground rounded-bl-none"
-        )}
-      >
-        {toolsUsed && toolsUsed.length > 0 && (
-          <div className="mb-3 space-y-2">
-            {toolsUsed.map((tool, idx) => (
-              <ToolResponseUI 
-                key={idx} 
-                toolName={tool} 
-                toolResult={toolResults ? toolResults[idx] : undefined} 
-                onSendMessage={onSendMessage}
-              />
-            ))}
-          </div>
-        )}
-        
-        {content && (
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">
-            {content}
-          </div>
-        )}
+    <div className={cn("flex w-full mb-8 group", isUser ? "justify-end" : "justify-start")}>
+      <div className={cn(
+        "flex gap-4 w-full max-w-3xl",
+        isUser ? "flex-row-reverse" : "flex-row"
+      )}>
+        {/* Avatar */}
+        <div className={cn(
+          "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border shadow-sm",
+          isUser 
+            ? "bg-secondary border-border/50 text-secondary-foreground" 
+            : "bg-primary/10 border-primary/20 text-primary"
+        )}>
+          {isUser ? <User className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+        </div>
+
+        {/* Content Wrapper */}
+        <div className={cn(
+          "flex flex-col gap-2 min-w-0 flex-1",
+          isUser ? "items-end" : "items-start"
+        )}>
+          {/* Tool Responses (if Assistant) */}
+          {!isUser && toolsUsed && toolsUsed.length > 0 && (
+            <div className="mb-2 space-y-2 w-full max-w-sm">
+              {toolsUsed.map((tool, idx) => (
+                <ToolResponseUI 
+                  key={idx} 
+                  toolName={tool} 
+                  toolResult={toolResults ? toolResults[idx] : undefined} 
+                  onSendMessage={onSendMessage}
+                />
+              ))}
+            </div>
+          )}
+          
+          {/* Text Content */}
+          {content && (
+            <div className={cn(
+              "whitespace-pre-wrap text-[15px] leading-relaxed tracking-tight",
+              isUser ? "text-right" : "text-left text-foreground/90"
+            )}>
+              {content}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

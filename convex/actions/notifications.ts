@@ -31,7 +31,7 @@ export const checkAndSend = internalAction({
     const BUFFER_MS = 60_000; // 1-minute lookahead
 
     // Get all unsent notifications due within the next minute
-    const dueNotifications = await ctx.runQuery(anyApi.notifications.getDue, {
+    const dueNotifications = await ctx.runQuery(anyInternal.notifications.getDue, {
       before: now + BUFFER_MS,
     });
 

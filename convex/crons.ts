@@ -13,4 +13,11 @@ crons.interval(
   anyInternal.actions.notifications.checkAndSend
 );
 
+// Check for unconfirmed events every hour
+crons.hourly(
+  "check-unconfirmed-events",
+  { minuteUTC: 0 },
+  anyInternal.schedules.checkUnconfirmedEvents
+);
+
 export default crons;

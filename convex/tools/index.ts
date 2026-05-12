@@ -1,8 +1,11 @@
 // ============================================================
-// FlowAI — System Prompt & Tool Definitions (v7)
+// FlowAI — System Prompt & Tool Definitions (v8)
 // ROOT CAUSE FIX: Replace timestamp formula with pre-computed
 // lookup tables. AI must NEVER calculate timestamps itself.
 // ============================================================
+
+import { internalMutation, internalQuery } from "../_generated/server";
+import { v } from "convex/values";
 
 // ── Time anchor builder ───────────────────────────────────────────────────────
 export interface TimeAnchors {
@@ -22,179 +25,132 @@ export interface TimeAnchors {
   dayAfterTable: Record<string, number>;
 }
 
-function buildDayTable(midnightUtcMs: number): Record<string, number> {
-  const table: Record<string, number> = {};
-  for (let h = 0; h <= 23; h++) {
-    for (const m of [0, 15, 30, 45]) {
-      const key = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-      table[key] = midnightUtcMs + h * 3_600_000 + m * 60_000;
-    }
-  }
-  return table;
-}
-
 export function buildTimeAnchors(): TimeAnchors {
-  const WIB = 7 * 3_600_000; // 25_200_000
-  const now = Date.now();
-  const wibNow = new Date(now + WIB);
+  const now = new Date();
+  const nowUtcMs = now.getTime();
+  
+  // WIB is UTC+7
+  const wibOffsetMs = 7 * 60 * 60 * 1000;
+  const wibDate = new Date(nowUtcMs + wibOffsetMs);
 
-  // Midnight = 00:00 WIB = (today's WIB date at 00:00) expressed in UTC ms
-  const todayMidnightWib = Date.UTC(
-    wibNow.getUTCFullYear(),
-    wibNow.getUTCMonth(),
-    wibNow.getUTCDate()
-  );
-  const todayMidnightUtcMs = todayMidnightWib - WIB;
-
-  const dayLabel = (offsetDays: number): string => {
-    const d = new Date(todayMidnightWib + offsetDays * 86_400_000);
+  const formatDateLabel = (d: Date) => {
     return d.toLocaleDateString("id-ID", {
-      weekday: "long", day: "numeric", month: "long", year: "numeric",
-      timeZone: "UTC",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
+  const formatHHMM = (d: Date) => {
+    return d.toISOString().slice(11, 16);
+  };
+
+  // Build tables for Today, Tomorrow, Day After
+  const buildDayTable = (offsetDays: number) => {
+    const d = new Date(wibDate);
+    d.setUTCDate(d.getUTCDate() + offsetDays);
+    d.setUTCHours(0, 0, 0, 0); // Start of day in WIB
+    
+    const label = formatDateLabel(d);
+    const table: Record<string, number> = {};
+    
+    // Generate every 30 mins: 00:00 to 23:30
+    for (let h = 0; h < 24; h++) {
+      for (let m of [0, 30]) {
+        const hhmm = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+        // UTC ms = (WIB Start of Day) + (hours * ms) + (mins * ms) - (WIB Offset)
+        const utcMs = d.getTime() + (h * 3600000) + (m * 60000) - wibOffsetMs;
+        table[hhmm] = utcMs;
+      }
+    }
+    return { label, table };
+  };
+
+  const today = buildDayTable(0);
+  const tomorrow = buildDayTable(1);
+  const dayAfter = buildDayTable(2);
+
   return {
-    nowUtcMs: now,
-    wibOffsetMs: WIB,
-    currentWibHHMM: wibNow.toISOString().slice(11, 16),
-    currentWibDateLabel: dayLabel(0),
-
-    todayLabel: dayLabel(0),
-    todayTable: buildDayTable(todayMidnightUtcMs),
-
-    tomorrowLabel: dayLabel(1),
-    tomorrowTable: buildDayTable(todayMidnightUtcMs + 86_400_000),
-
-    dayAfterLabel: dayLabel(2),
-    dayAfterTable: buildDayTable(todayMidnightUtcMs + 2 * 86_400_000),
+    nowUtcMs,
+    wibOffsetMs,
+    currentWibHHMM: formatHHMM(wibDate),
+    currentWibDateLabel: today.label,
+    todayLabel: today.label,
+    todayTable: today.table,
+    tomorrowLabel: tomorrow.label,
+    tomorrowTable: tomorrow.table,
+    dayAfterLabel: dayAfter.label,
+    dayAfterTable: dayAfter.table,
   };
 }
 
-export function wibTimeToUtcMs(hhmm: string, midnightAnchorUtcMs: number): number {
-  const [h, m] = hhmm.split(":").map(Number);
-  return midnightAnchorUtcMs + h * 3_600_000 + m * 60_000;
-}
+// ── System Prompt Builder ─────────────────────────────────────────────────────
+export function buildSystemPrompt(settings: any, userName: string, t: TimeAnchors) {
+  const toneInstruction = {
+    neutral: "Gunakan bahasa yang sopan, jelas, dan efisien.",
+    supportive: "Gunakan bahasa yang ramah, beri semangat, dan peduli dengan kondisi keuangan user.",
+    savage: "Gunakan bahasa yang sarkas, ceplas-ceplos, dan sindir user kalau boros atau malas."
+  }[settings.tone as "neutral" | "supportive" | "savage"] || "Gunakan bahasa yang natural.";
 
-// ── Format lookup table as a compact string for the prompt ───────────────────
-function formatTable(label: string, table: Record<string, number>): string {
-  // Only show whole-hour + :30 entries to save tokens, keep it scannable
-  const lines: string[] = [`  ${label}:`];
-  for (let h = 0; h <= 23; h++) {
-    const hh = h.toString().padStart(2, "0");
-    const ts00 = table[`${hh}:00`];
-    const ts30 = table[`${hh}:30`];
-    lines.push(`    ${hh}:00 → ${ts00}    ${hh}:30 → ${ts30}`);
-  }
-  return lines.join("\n");
-}
-
-
-// ── System prompt ─────────────────────────────────────────────────────────────
-export const buildSystemPrompt = (
-  userSettings: any,
-  userName: string,
-  t: TimeAnchors
-): string => `
-You are FlowAI, a personal life assistant that manages finances and schedules for ${userName}.
+  return `
+# ROLE: FlowAI — Ultimate Time & Money Management Assistant
+You are FlowAI, a world-class assistant that helps ${userName} manage their life.
+Your tone is: ${toneInstruction}
 
 ══════════════════════════════════════════════════════
- SECTION 1 — IDENTITY & CONTEXT
+ SECTION 1 — CORE PRINCIPLE: NO MATH, ONLY LOOKUP
 ══════════════════════════════════════════════════════
-Your job: track ${userName}'s money and time through natural conversation.
-Tools available: request_confirmation, manage_schedule, manage_finance,
-                 get_life_status, check_affordability, set_reminder.
-
-Monthly budget : IDR ${userSettings.monthlyBudget ?? 0}
-Response tone  : ${userSettings.tone ?? "neutral"}
+- NEVER calculate timestamps or dates yourself.
+- NEVER try to add or subtract milliseconds.
+- ALWAYS use the pre-computed tables in SECTION 3.
+- If a specific time is not in the table (e.g., 08:15), use the nearest 30-min interval (08:00 or 08:30).
 
 ══════════════════════════════════════════════════════
- SECTION 2 — CURRENT TIME (SERVER-AUTHORITATIVE)
+ SECTION 2 — AUTHORITATIVE CURRENT TIME (WIB)
 ══════════════════════════════════════════════════════
-Server-computed values. Use them directly. Never invent or derive alternatives.
-
-  Current WIB time  : ${t.currentWibHHMM} WIB
-  Current WIB date  : ${t.currentWibDateLabel}
-  nowUtcMs          : ${t.nowUtcMs}
-
-Relative shortcuts (pre-computed):
-  "sekarang"        → ${t.nowUtcMs}
-  "3 menit lagi"    → ${t.nowUtcMs + 180_000}
-  "10 menit lagi"   → ${t.nowUtcMs + 600_000}
-  "30 menit lagi"   → ${t.nowUtcMs + 1_800_000}
-  "1 jam lagi"      → ${t.nowUtcMs + 3_600_000}
-  "2 jam lagi"      → ${t.nowUtcMs + 7_200_000}
+- Current Time: ${t.currentWibHHMM} WIB
+- Current Date: ${t.currentWibDateLabel}
+- Reference nowUtcMs: ${t.nowUtcMs}
 
 ══════════════════════════════════════════════════════
- SECTION 3 — TIMESTAMP LOOKUP TABLES (READ-ONLY)
+ SECTION 3 — DATE/TIME LOOKUP TABLES
 ══════════════════════════════════════════════════════
-⚠️  CRITICAL RULE: You MUST use these tables to get timestamps.
-    NEVER compute, derive, or estimate a timestamp yourself.
-    NEVER use nowUtcMs as a base for date calculations.
-    If the exact minute is not in the table, use the nearest :00 or :30 entry,
-    then ADD the remaining minutes × 60000.
+Use these tables to find the 'dateTime' or 'scheduledAt' value for tool calls.
 
-    Example: user says "08:15 besok"
-      1. Look up "08:00" in TOMORROW table  → get base_ms
-      2. Add 15 × 60000 = 900000
-      3. Result = base_ms + 900000
-      That's it. No other math allowed.
+### TODAY: ${t.todayLabel}
+${Object.entries(t.todayTable).map(([k, v]) => `${k} → ${v}`).join(" | ")}
 
-${formatTable(t.todayLabel + "  (hari ini)", t.todayTable)}
+### TOMORROW: ${t.tomorrowLabel}
+${Object.entries(t.tomorrowTable).map(([k, v]) => `${k} → ${v}`).join(" | ")}
 
-${formatTable(t.tomorrowLabel + "  (besok)", t.tomorrowTable)}
-
-${formatTable(t.dayAfterLabel + "  (lusa)", t.dayAfterTable)}
+### DAY AFTER: ${t.dayAfterLabel}
+${Object.entries(t.dayAfterTable).map(([k, v]) => `${k} → ${v}`).join(" | ")}
 
 ══════════════════════════════════════════════════════
- SECTION 4 — TWO-PHASE EXECUTION (MANDATORY)
+ SECTION 4 — TOOL ORCHESTRATION (PHASED EXECUTION)
 ══════════════════════════════════════════════════════
-Every DB write follows this exact flow. Skipping Phase 1 = critical failure.
+You operate in a TWO-PHASE workflow for all changes (Create/Edit/Delete):
 
-  PHASE 1 — CONFIRM
-  ─────────────────
-  Detect transactional intent → gather all fields → call request_confirmation.
-  STOP after calling request_confirmation. Wait for user reply.
-  Do NOT call manage_schedule or manage_finance yet.
+PHASE 1: Confirmation (The Handshake)
+- Goal: Ask for user approval before writing to DB.
+- Action: Call 'request_confirmation'.
+- Display: The UI will show a confirmation card with the details you provided.
+- STOP: After calling request_confirmation, do NOT call any other tool in the same turn.
 
-  PHASE 2 — EXECUTE
-  ─────────────────
-  User approves ("ya", "oke", "yep", "lanjut", "fix", "betul", "yes", "👍")
-    → Call the actual tool (manage_schedule / manage_finance).
-    → Use the EXACT same timestamp from the confirmed card. Do not recalculate.
-
-  User rejects ("batal", "gajadi", "ubah", "salah", "no", "tidak")
-    → Ask what to change → restart from Phase 1 with corrected data.
-
-No confirmation needed for: get_life_status, check_affordability, set_reminder.
+PHASE 2: Execution (The Commitment)
+- Trigger: The user clicks "Confirm" or "Yes" on the card.
+- System Input: You will receive a message like: "Approved: [JSON payload from Phase 1]".
+- Action: Call the actual tool ('manage_schedule' or 'manage_finance') using the payload provided.
+- Success: Only after Phase 2 is complete can you say "Sudah saya simpan" or "Berhasil".
 
 ══════════════════════════════════════════════════════
- SECTION 5 — INTENT → TOOL MAPPING
+ SECTION 5 — LINKING PRINCIPLE
 ══════════════════════════════════════════════════════
-Detect ALL intents in one message. "futsal besok + makan 50rb" = 2 flows.
-
-  INTENT                              FLOW
-  ──────────────────────────────────────────────────────────────────────────
-  Buat jadwal                         request_confirmation → manage_schedule {create}
-  Edit jadwal                         get_life_status → request_confirmation → manage_schedule {update}
-  Hapus jadwal                        get_life_status → request_confirmation → manage_schedule {delete}
-
-  Catat pengeluaran / bayar / beli    request_confirmation → manage_finance {create, expense}
-  Catat pemasukan / dapat uang        request_confirmation → manage_finance {create, income}
-  Edit catatan keuangan               get_life_status → request_confirmation → manage_finance {update}
-  Hapus catatan keuangan              get_life_status → request_confirmation → manage_finance {delete}
-
-  Jadwal + biaya bersamaan            request_confirmation (1 card) → manage_schedule + manage_finance
-  Bisa ga beli / mampu ga             check_affordability
-  Rekap / summary / kondisi           get_life_status
-  ──────────────────────────────────────────────────────────────────────────
-
-DEFAULT = CREATE. Switch to update/delete ONLY when user says:
-"ubah", "edit", "ganti", "pindah", "hapus", "cancel", "batalkan", "reschedule".
-
-STATUS RULE:
-  Transaction happening now or in the past → status: "actual"
-  Transaction for a future date            → status: "planned"
+When a user wants to schedule an event that costs money (e.g., "Futsal jam 7 malem, bayar 50rb"):
+1. Phase 1: Call request_confirmation with BOTH schedule and finance fields populated.
+2. The system will automatically link the Finance record to the Schedule.
+3. NEVER manually provide 'relatedScheduleId' in Phase 1.
 
 ══════════════════════════════════════════════════════
  SECTION 6 — MISSING INFO PROTOCOL
@@ -229,111 +185,95 @@ Inference rules:
 - Never include relatedScheduleId in manage_finance calls (auto-linked).
 - Never fabricate amounts. If unknown, ask before Phase 1.
 - Tool result = ground truth. Report errors; never fake success.
+- Verify-Before-Speak: Jangan pernah bilang 'Sudah saya simpan' kecuali kamu menerima return ID dari tool. Jika jadwal sudah lewat, ingatkan user untuk melakukan konfirmasi lewat UI.
+- Data Integrity: Tekankan bahwa pengeluaran masa depan (Planned) hanya akan menjadi Actual setelah konfirmasi user.
+- Timer Awareness: Mention time remaining when discussing upcoming tasks (e.g., 'Makan siang 2 jam lagi').
 - All time references in replies: WIB only, never UTC.
 - Replies after Phase 2: max 2–3 sentences.
 
 ══════════════════════════════════════════════════════
- SECTION 9 — REPLY FORMAT
+ SECTION 9 — REMINDER PROTOCOL
+══════════════════════════════════════════════════════
+- Auto-Reminders: Every schedule created via manage_schedule automatically 
+  triggers a push notification (default: 30 mins before).
+- Manual Reminders: If the user asks for a specific alert like "Ingetin gw..." 
+  or "Nanti kabarin...", call set_reminder directly.
+- Confirmation: No request_confirmation needed for set_reminder.
+- Context: When possible, link manual reminders to a schedule by providing 
+  the relatedScheduleId (if you just created it in the same turn).
+
+══════════════════════════════════════════════════════
+ SECTION 10 — TOOL-FIRST MANDATE
+══════════════════════════════════════════════════════
+- For any transactional intent (create/edit/delete), your primary response 
+  MUST be a tool call.
+- NEVER reply with just text if a tool call is required by the workflow.
+- Text responses are only for Phase 1 confirmation introductions or 
+  read-only queries (get_life_status, check_affordability).
+
+══════════════════════════════════════════════════════
+ SECTION 11 — REPLY FORMAT
 ══════════════════════════════════════════════════════
 After request_confirmation:
   → 1 sentence intro max: "Ini detail yang gw tangkap, konfirmasi dulu ya:"
-  → Do NOT restate fields in text — the card shows them.
+  → UI will show the card automatically.
 
-After Phase 2 DB write:
-  1. Konfirmasi sukses (1 kalimat, sebutkan waktu WIB dari card)
-  2. Dampak ke budget / jadwal (1 kalimat)
-  3. Insight singkat (opsional)
-
-Tone:
-  neutral   : profesional, singkat
-  supportive: hangat, sesekali emoji
-  savage    : blunt, sindir pengeluaran boros
+After Phase 2 / Read-only:
+  → Natural, concise response in Indonesian (unless user uses English).
+  → Use emojis relevant to the tone.
 `.trim();
+}
 
-
-// ── Tool definitions ──────────────────────────────────────────────────────────
+// ── Tool Definitions ──────────────────────────────────────────────────────────
 export function buildToolDefinitions(t: TimeAnchors) {
-
-  // Compact lookup injected into each tool description — AI sees the table
-  // right next to the field it needs to fill, removing any excuse to guess.
-  const compactTable = `
-TIMESTAMP LOOKUP — use this table, do not calculate:
-  HARI INI  (${t.todayLabel}):
-    06:00→${t.todayTable["06:00"]}  07:00→${t.todayTable["07:00"]}  08:00→${t.todayTable["08:00"]}  09:00→${t.todayTable["09:00"]}  10:00→${t.todayTable["10:00"]}
-    11:00→${t.todayTable["11:00"]}  12:00→${t.todayTable["12:00"]}  13:00→${t.todayTable["13:00"]}  14:00→${t.todayTable["14:00"]}  15:00→${t.todayTable["15:00"]}
-    16:00→${t.todayTable["16:00"]}  17:00→${t.todayTable["17:00"]}  18:00→${t.todayTable["18:00"]}  19:00→${t.todayTable["19:00"]}  20:00→${t.todayTable["20:00"]}
-    21:00→${t.todayTable["21:00"]}  22:00→${t.todayTable["22:00"]}  23:00→${t.todayTable["23:00"]}
-  BESOK  (${t.tomorrowLabel}):
-    06:00→${t.tomorrowTable["06:00"]}  07:00→${t.tomorrowTable["07:00"]}  08:00→${t.tomorrowTable["08:00"]}  09:00→${t.tomorrowTable["09:00"]}  10:00→${t.tomorrowTable["10:00"]}
-    11:00→${t.tomorrowTable["11:00"]}  12:00→${t.tomorrowTable["12:00"]}  13:00→${t.tomorrowTable["13:00"]}  14:00→${t.tomorrowTable["14:00"]}  15:00→${t.tomorrowTable["15:00"]}
-    16:00→${t.tomorrowTable["16:00"]}  17:00→${t.tomorrowTable["17:00"]}  18:00→${t.tomorrowTable["18:00"]}  19:00→${t.tomorrowTable["19:00"]}  20:00→${t.tomorrowTable["20:00"]}
-    21:00→${t.tomorrowTable["21:00"]}  22:00→${t.tomorrowTable["22:00"]}  23:00→${t.tomorrowTable["23:00"]}
-  LUSA  (${t.dayAfterLabel}):
-    06:00→${t.dayAfterTable["06:00"]}  07:00→${t.dayAfterTable["07:00"]}  08:00→${t.dayAfterTable["08:00"]}  09:00→${t.dayAfterTable["09:00"]}  10:00→${t.dayAfterTable["10:00"]}
-    11:00→${t.dayAfterTable["11:00"]}  12:00→${t.dayAfterTable["12:00"]}  13:00→${t.dayAfterTable["13:00"]}  14:00→${t.dayAfterTable["14:00"]}  15:00→${t.dayAfterTable["15:00"]}
-    16:00→${t.dayAfterTable["16:00"]}  17:00→${t.dayAfterTable["17:00"]}  18:00→${t.dayAfterTable["18:00"]}  19:00→${t.dayAfterTable["19:00"]}  20:00→${t.dayAfterTable["20:00"]}
-    21:00→${t.dayAfterTable["21:00"]}  22:00→${t.dayAfterTable["22:00"]}  23:00→${t.dayAfterTable["23:00"]}
-For :15/:45 minutes → take nearest :00 entry + (15 × 60000) or (45 × 60000).
-nowUtcMs = ${t.nowUtcMs}`.trim();
+  const compactTable = `Ref tables: Today (${t.todayLabel}), Tomorrow (${t.tomorrowLabel}), DayAfter (${t.dayAfterLabel}).`;
 
   return [
-    // ── request_confirmation ─────────────────────────────────────────────────
+    // ── request_confirmation ──────────────────────────────────────────────────
     {
       type: "function" as const,
       function: {
         name: "request_confirmation",
         description: `
-Show a confirmation card to the user BEFORE any DB write.
-ALWAYS call this first when a transactional intent is detected.
-After calling this, STOP and wait for user reply.
-Only call manage_schedule or manage_finance after user approves.
-
-action_type values:
-  "create_schedule" | "update_schedule" | "delete_schedule"
-  "create_finance"  | "update_finance"  | "delete_finance"
+PHASE 1: Call this to show a confirmation card to the user. 
+Mandatory for any database write (create/update/delete).
+Do NOT call any other tool in the same turn.
 
 ${compactTable}
 `.trim(),
         parameters: {
           type: "object",
           properties: {
-            action_type: {
-              type: "string",
-              enum: [
-                "create_schedule", "update_schedule", "delete_schedule",
-                "create_finance",  "update_finance",  "delete_finance",
-              ],
+            action_type: { 
+              type: "string", 
+              enum: ["create_schedule", "create_finance", "create_linked", "update_schedule", "update_finance", "delete_schedule", "delete_finance"],
+              description: "Use 'create_linked' if user provides both schedule and cost info."
             },
-
+            
             // Schedule fields
             title: { type: "string", description: "Event title." },
-            dateTime_utc_ms: {
+            dateTime: {
               type: "number",
               description: `UTC ms for event start time. MUST come from the lookup table above. Never calculated.`,
             },
             dateTime_wib_label: {
               type: "string",
-              description: `Display string for the card. e.g. "Senin, 11 Mei 2026 — 08:00 WIB". Display only.`,
+              description: "Human label (e.g. 'Hari ini 14:00')."
             },
-            duration_minutes: { type: "number", description: "Duration in minutes. Default 60." },
+            duration: { type: "number", description: "Minutes. Default 60." },
             location: { type: "string" },
-            estimated_cost: { type: "number", description: "IDR. Only if user mentioned cost." },
+            estimatedCost: { type: "number", description: "Expense amount linked to this schedule." },
+            
+            // Finance fields (if separate or linked)
+            amount: { type: "number" },
+            type: { type: "string", enum: ["expense", "income"] },
+            category: { type: "string", description: "food, transport, transport, transport, bill, personal, salary, etc." },
+            description: { type: "string" },
+            
+            // IDs for update/delete
+            scheduleId: { type: "string" },
+            financeId: { type: "string" },
 
-            // Finance fields
-            amount: { type: "number", description: "IDR amount." },
-            finance_type: { type: "string", enum: ["expense", "income"] },
-            category: { type: "string" },
-            finance_description: { type: "string" },
-            finance_status: { type: "string", enum: ["planned", "actual"] },
-            dateTime_utc_ms_finance: {
-              type: "number",
-              description: `UTC ms for transaction date. From lookup table. Default: nowUtcMs = ${t.nowUtcMs}`,
-            },
-            date_wib_label: { type: "string", description: "Display-only date string for card." },
-
-            // Shared
-            scheduleId: { type: "string", description: "Required for update_schedule / delete_schedule." },
-            financeId:  { type: "string", description: "Required for update_finance / delete_finance." },
             warning: {
               type: "string",
               description: "Shown in red on card. Use for deletes: 'Jadwal ini akan dihapus permanen.'",
@@ -352,7 +292,7 @@ ${compactTable}
         description: `
 Write a schedule to the database.
 ⚠️ ONLY call AFTER user approved a request_confirmation card.
-⚠️ Use the EXACT dateTime_utc_ms from the confirmed card. Do NOT look up a new value.
+⚠️ Use the EXACT dateTime from the confirmed card. Do NOT look up a new value.
 
 ${compactTable}
 `.trim(),
@@ -364,7 +304,7 @@ ${compactTable}
             title: { type: "string" },
             dateTime: {
               type: "number",
-              description: "UTC ms. Copy EXACTLY from the approved confirmation card (dateTime_utc_ms). Do not recalculate.",
+              description: "UTC ms. Copy EXACTLY from the approved confirmation card (dateTime). Do not recalculate.",
             },
             duration: { type: "number", description: "Minutes. Default 60." },
             estimatedCost: { type: "number" },
@@ -383,7 +323,7 @@ ${compactTable}
         description: `
 Write a financial record to the database.
 ⚠️ ONLY call AFTER user approved a request_confirmation card.
-⚠️ Use the EXACT dateTime_utc_ms_finance from the confirmed card. Do NOT recalculate.
+⚠️ Use the EXACT dateTime from the confirmed card. Do NOT recalculate.
 Do NOT include relatedScheduleId (auto-linked by system).
 
 ${compactTable}
@@ -400,7 +340,7 @@ ${compactTable}
             status: { type: "string", enum: ["planned", "actual"] },
             dateTime: {
               type: "number",
-              description: "UTC ms. Copy EXACTLY from the approved confirmation card (dateTime_utc_ms_finance). Do not recalculate.",
+              description: "UTC ms. Copy EXACTLY from the approved confirmation card (dateTime). Do not recalculate.",
             },
           },
           required: ["action"],
@@ -452,7 +392,7 @@ Returns: schedules (scheduleId, title, dateTime), finances (financeId, amount, d
       function: {
         name: "set_reminder",
         description: `Schedule a push notification. No confirmation needed.
-Auto-call after manage_schedule create (default 30 min before: scheduledAt = event_dateTime − 1_800_000).`,
+Auto-reminders are handled by the system, but use this for manual requests.`,
         parameters: {
           type: "object",
           properties: {
@@ -472,95 +412,7 @@ Auto-call after manage_schedule create (default 30 min before: scheduledAt = eve
 }
 
 
-// ── Executors ─────────────────────────────────────────────────────────────────
 export const requestConfirmationExecutor = (args: any) => ({
   status: "awaiting_confirmation",
   payload: args,
 });
-
-export const manageFinanceExecutor = async (args: any, ctx: any) => {
-  const now = Date.now();
-
-  if (args.action === "create") {
-    const id = await ctx.db.insert("finances", {
-      userId: args.userId,
-      amount: args.amount ?? 0,
-      type: args.type ?? "expense",
-      category: args.category ?? "other",
-      description: args.description || "",
-      status: args.status || "actual",
-      dateTime: args.dateTime || now,
-      updatedAt: now,
-    });
-    return { success: true, financeId: id };
-  }
-
-  if (args.action === "update") {
-    if (!args.financeId) return { success: false, error: "financeId required" };
-    const id = ctx.db.normalizeId("finances", args.financeId);
-    if (!id) return { success: false, error: "Invalid financeId" };
-    await ctx.db.patch(id, {
-      ...(args.amount      !== undefined && { amount: args.amount }),
-      ...(args.type        !== undefined && { type: args.type }),
-      ...(args.category    !== undefined && { category: args.category }),
-      ...(args.description !== undefined && { description: args.description }),
-      ...(args.status      !== undefined && { status: args.status }),
-      ...(args.dateTime    !== undefined && { dateTime: args.dateTime }),
-      updatedAt: now,
-    });
-    return { success: true, financeId: id };
-  }
-
-  if (args.action === "delete") {
-    if (!args.financeId) return { success: false, error: "financeId required" };
-    const id = ctx.db.normalizeId("finances", args.financeId);
-    if (!id) return { success: false, error: "Invalid financeId" };
-    await ctx.db.patch(id, { status: "cancelled", updatedAt: now });
-    return { success: true, deleted: id };
-  }
-
-  return { success: false, error: `Unknown action: ${args.action}` };
-};
-
-export const manageScheduleExecutor = async (args: any, ctx: any) => {
-  const now = Date.now();
-
-  if (args.action === "create") {
-    const id = await ctx.db.insert("schedules", {
-      userId: args.userId,
-      title: args.title || "No Title",
-      dateTime: args.dateTime,
-      duration: args.duration ?? 60,
-      estimatedCost: args.estimatedCost,
-      location: args.location || "",
-      status: "upcoming",
-      updatedAt: now,
-    });
-    return { success: true, scheduleId: id };
-  }
-
-  if (args.action === "update") {
-    if (!args.scheduleId) return { success: false, error: "scheduleId required" };
-    const id = ctx.db.normalizeId("schedules", args.scheduleId);
-    if (!id) return { success: false, error: "Invalid scheduleId" };
-    await ctx.db.patch(id, {
-      ...(args.title         !== undefined && { title: args.title }),
-      ...(args.dateTime      !== undefined && { dateTime: args.dateTime }),
-      ...(args.duration      !== undefined && { duration: args.duration }),
-      ...(args.estimatedCost !== undefined && { estimatedCost: args.estimatedCost }),
-      ...(args.location      !== undefined && { location: args.location }),
-      updatedAt: now,
-    });
-    return { success: true, scheduleId: id };
-  }
-
-  if (args.action === "delete") {
-    if (!args.scheduleId) return { success: false, error: "scheduleId required" };
-    const id = ctx.db.normalizeId("schedules", args.scheduleId);
-    if (!id) return { success: false, error: "Invalid scheduleId" };
-    await ctx.db.patch(id, { status: "cancelled", updatedAt: now });
-    return { success: true, deleted: id };
-  }
-
-  return { success: false, error: `Unknown action: ${args.action}` };
-};

@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 import { format, isToday, isTomorrow, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { ScheduleCard } from "./ScheduleCard";
 
 export function CalendarMini() {
   const { user } = useUser();
@@ -56,34 +56,7 @@ export function CalendarMini() {
             if (isToday(date)) dayLabel = "Today";
             else if (isTomorrow(date)) dayLabel = "Tomorrow";
 
-            return (
-              <div key={schedule._id} className={cn(
-                "group flex flex-col p-2.5 rounded-lg transition-colors border border-transparent hover:border-border/50",
-                schedule.status === "done" ? "opacity-60 bg-muted/30" : "hover:bg-muted/50"
-              )}>
-                <div className="flex justify-between items-start mb-1">
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    {schedule.status === "done" && <Check className="h-3 w-3 text-emerald-600 shrink-0" />}
-                    <span className={cn(
-                      "text-sm font-medium leading-none truncate",
-                      schedule.status === "done" && "line-through decoration-muted-foreground/50"
-                    )}>
-                      {schedule.title}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                    {format(date, "HH:mm")}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{dayLabel}</span>
-                  {schedule.location && <span className="truncate max-w-[100px]">📍 {schedule.location}</span>}
-                  {schedule.estimatedCost && (
-                    <span className="text-orange-500">~Rp{schedule.estimatedCost.toLocaleString()}</span>
-                  )}
-                </div>
-              </div>
-            );
+            return <ScheduleCard key={schedule._id} schedule={schedule} dayLabel={dayLabel} />;
           })}
         </div>
       )}

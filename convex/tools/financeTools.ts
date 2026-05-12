@@ -17,6 +17,20 @@ export const manageFinance = internalMutation({
     relatedScheduleId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    let resolvedUserId = args.userId;
+
+    if (identity) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
+        .unique();
+      if (!user) throw new Error("User not found");
+      resolvedUserId = user._id;
+    }
+
+    if (!resolvedUserId) throw new Error("Unauthenticated");
+
     const now = Date.now();
     const financeId = args.financeId ? (ctx.db.normalizeId("finances", args.financeId) ?? undefined) : undefined;
     const relatedScheduleId = args.relatedScheduleId ? (ctx.db.normalizeId("schedules", args.relatedScheduleId) ?? undefined) : undefined;
@@ -31,7 +45,7 @@ export const manageFinance = internalMutation({
       }
       
       const id = await ctx.db.insert("finances", {
-        userId: args.userId,
+        userId: resolvedUserId,
         amount: args.amount ?? 0,
         type: args.type ?? "expense",
         category: args.category ?? "other",
@@ -45,7 +59,10 @@ export const manageFinance = internalMutation({
     }
 
     if (args.action === "update") {
-      if (!financeId) throw new Error("financeId is required for update");
+      if (!financeId) throw new Error("financeId is required for update or provided ID is invalid");
+      const existing = await ctx.db.get(financeId);
+      if (!existing || existing.userId !== resolvedUserId) throw new Error("Unauthorized or not found");
+      
       await ctx.db.patch(financeId, {
         ...(args.amount !== undefined && { amount: args.amount }),
         ...(args.type !== undefined && { type: args.type }),
@@ -60,7 +77,10 @@ export const manageFinance = internalMutation({
     }
 
     if (args.action === "delete") {
-      if (!financeId) throw new Error("financeId is required for delete");
+      if (!financeId) throw new Error("financeId is required for delete or provided ID is invalid");
+      const existing = await ctx.db.get(financeId);
+      if (!existing || existing.userId !== resolvedUserId) throw new Error("Unauthorized or not found");
+      
       // SOFT-DELETE
       await ctx.db.patch(financeId, {
         status: "cancelled",
@@ -89,8 +109,8 @@ export const checkAffordabilityData = internalQuery({
 
     const finances = await ctx.db
       .query("finances")
-      .withIndex("by_userId_dateTime", (q) => q.eq("userId", args.userId).gte("dateTime", startOfMonth.getTime()))
-      .filter((q) => q.neq(q.field("status"), "cancelled"))
+      .withIndex("by_userId_dateTime", (q: any) => q.eq("userId", args.userId).gte("dateTime", startOfMonth.getTime()))
+      .filter((q: any) => q.neq(q.field("status"), "cancelled"))
       .collect();
 
     let balance = 0;
@@ -133,14 +153,14 @@ export const getLifeStatusData = internalQuery({
 
     const finances = await ctx.db
       .query("finances")
-      .withIndex("by_userId_dateTime", (q) => q.eq("userId", args.userId).gte("dateTime", startRange))
-      .filter((q) => q.neq(q.field("status"), "cancelled"))
+      .withIndex("by_userId_dateTime", (q: any) => q.eq("userId", args.userId).gte("dateTime", startRange))
+      .filter((q: any) => q.neq(q.field("status"), "cancelled"))
       .collect();
 
     const schedules = await ctx.db
       .query("schedules")
-      .withIndex("by_userId_dateTime", (q) => q.eq("userId", args.userId).gte("dateTime", startRange))
-      .filter((q) => q.neq(q.field("status"), "cancelled"))
+      .withIndex("by_userId_dateTime", (q: any) => q.eq("userId", args.userId).gte("dateTime", startRange))
+      .filter((q: any) => q.neq(q.field("status"), "cancelled"))
       .collect();
 
     let totalSpent = 0;
@@ -149,10 +169,10 @@ export const getLifeStatusData = internalQuery({
     let upcomingSchedules = 0;
 
     for (const f of finances) {
-      if (f.dateTime <= now) {
+      if (f.status === "actual") {
         if (f.type === "expense") totalSpent += f.amount;
         if (f.type === "income") totalIncome += f.amount;
-      } else {
+      } else if (f.status === "planned") {
         if (f.type === "expense") upcomingCosts += f.amount;
       }
     }
