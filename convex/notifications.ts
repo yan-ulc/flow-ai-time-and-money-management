@@ -1,7 +1,7 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
-export const getDue = query({
+export const getDue = internalQuery({
   args: { before: v.number() },
   handler: async (ctx, args) => {
     return await ctx.db

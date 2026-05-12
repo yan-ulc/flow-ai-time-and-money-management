@@ -20,23 +20,24 @@ export function CommandBar({ onSendMessage, isLoading }: CommandBarProps) {
   };
 
   return (
-    <div className="p-4">
+    <div className="relative group">
+      <div className="absolute -inset-1 bg-gradient-to-r from-primary/10 via-primary/5 to-blue-500/10 rounded-full blur-md opacity-70 group-hover:opacity-100 transition duration-500" />
       <form 
         onSubmit={handleSubmit}
-        className="max-w-3xl mx-auto relative flex items-center"
+        className="relative flex items-center bg-background/80 backdrop-blur-2xl border border-border/50 rounded-full shadow-lg overflow-hidden"
       >
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="e.g. Futsal besok jam 8 malam, 50rb..."
-          className="pr-12 py-6 rounded-full bg-muted/50 border-transparent focus-visible:ring-1 focus-visible:ring-primary shadow-sm"
+          placeholder="Ask me anything or capture an event..."
+          className="pr-14 py-7 text-[15px] rounded-full bg-transparent border-none focus-visible:ring-0 shadow-none placeholder:text-muted-foreground/70"
           disabled={isLoading}
         />
         <Button 
           type="submit" 
           size="icon"
           disabled={!input.trim() || isLoading}
-          className="absolute right-1.5 h-9 w-9 rounded-full transition-all"
+          className="absolute right-2 h-10 w-10 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
         >
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />

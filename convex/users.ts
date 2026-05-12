@@ -86,3 +86,27 @@ export const getUserSettings = query({
     return user.settings;
   },
 });
+
+export const updateUserSettings = mutation({
+  args: {
+    userId: v.id("users"),
+    settings: v.object({
+      monthlyBudget: v.optional(v.number()),
+      currency: v.optional(v.string()),
+      tone: v.optional(v.union(v.literal("neutral"), v.literal("supportive"), v.literal("savage"))),
+      timezone: v.optional(v.string()),
+      reminderMinutesBefore: v.optional(v.number()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+    
+    await ctx.db.patch(args.userId, {
+      settings: {
+        ...user.settings,
+        ...args.settings,
+      },
+    });
+  },
+});
