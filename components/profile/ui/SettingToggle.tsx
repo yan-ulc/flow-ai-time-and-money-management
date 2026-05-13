@@ -6,13 +6,27 @@ import { ToggleSwitch } from "./ToggleSwitch";
 export function SettingToggle({
   title,
   desc,
-  defaultOn,
+  defaultOn = false,
+  value,
+  onChange,
 }: {
   title: string;
   desc: string;
-  defaultOn: boolean;
+  defaultOn?: boolean;
+  value?: boolean;
+  onChange?: (newVal: boolean) => void;
 }) {
-  const [on, setOn] = React.useState(defaultOn);
+  const [internalOn, setInternalOn] = React.useState(defaultOn);
+  const isControlled = value !== undefined;
+  const isOn = isControlled ? value : internalOn;
+
+  const handleToggle = () => {
+    const nextValue = !isOn;
+    if (!isControlled) {
+      setInternalOn(nextValue);
+    }
+    onChange?.(nextValue);
+  };
 
   return (
     <div className="flex items-center justify-between">
@@ -20,7 +34,7 @@ export function SettingToggle({
         <span className="font-semibold text-sm">{title}</span>
         <span className="text-xs text-muted-foreground mt-0.5">{desc}</span>
       </div>
-      <ToggleSwitch isOn={on} onToggle={() => setOn(!on)} />
+      <ToggleSwitch isOn={isOn} onToggle={handleToggle} />
     </div>
   );
 }
