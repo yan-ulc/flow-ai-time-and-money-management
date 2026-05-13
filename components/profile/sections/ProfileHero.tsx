@@ -1,14 +1,20 @@
 "use client";
 
 import { formatCurrency } from "@/lib/utils";
-import type { UserResource } from "@clerk/types";
 import { motion } from "framer-motion";
 import { BrainCircuit, Mail, Shield, User, Zap } from "lucide-react";
 import { itemVariants } from "../motionVariants";
 import type { ProfileAggregation, UserTone } from "../profileTypes";
 import { QuickStat } from "../ui/QuickStat";
 
-type ClerkUser = UserResource | null | undefined;
+type ClerkUser =
+  | {
+      imageUrl?: string | null;
+      fullName?: string | null;
+      primaryEmailAddress?: { emailAddress?: string | null } | null;
+    }
+  | null
+  | undefined;
 
 export function ProfileHero({
   clerkUser,

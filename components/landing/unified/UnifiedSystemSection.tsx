@@ -98,7 +98,7 @@ export function UnifiedSystemSection() {
           className="relative rounded-4xl border border-white/10 bg-white/5 p-6 shadow-[0_35px_140px_-80px_rgba(15,23,42,0.95)]"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          transition={{ duration: 0.8, ease: cubicBezier(0.16, 1, 0.3, 1) }}
           viewport={{ once: true, amount: 0.4 }}
         >
           <div className="flex items-center justify-between text-xs text-slate-200/70">

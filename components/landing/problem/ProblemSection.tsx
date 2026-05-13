@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { cubicBezier, motion } from "framer-motion";
 import {
   AlertTriangle,
   Bell,
@@ -12,7 +12,11 @@ import { useEffect, useMemo, useState } from "react";
 
 const COPY_VARIANTS = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: cubicBezier(0.16, 1, 0.3, 1) },
+  },
 };
 
 type ChaosItem = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { cubicBezier, motion, useScroll, useTransform } from "framer-motion";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -11,7 +11,11 @@ import { useRef } from "react";
 
 const COPY_VARIANTS = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: cubicBezier(0.16, 1, 0.3, 1) },
+  },
 };
 
 export function PredictiveIntelligenceSection() {

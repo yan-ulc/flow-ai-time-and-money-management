@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { cubicBezier, motion } from "framer-motion";
 import {
   BrainCircuit,
   CalendarClock,
@@ -12,7 +12,11 @@ import {
 
 const COPY_VARIANTS = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: cubicBezier(0.16, 1, 0.3, 1) },
+  },
 };
 
 const CARD_VARIANTS = {
@@ -21,7 +25,7 @@ const CARD_VARIANTS = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.8, ease: "easeOut" },
+    transition: { duration: 0.8, ease: cubicBezier(0.16, 1, 0.3, 1) },
   },
 };
 

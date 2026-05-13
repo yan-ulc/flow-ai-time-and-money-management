@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { format, isToday, isTomorrow } from "date-fns";
-import { cn } from "@/lib/utils";
-import { Check, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { cn } from "@/lib/utils";
+import { useMutation } from "convex/react";
+import { format } from "date-fns";
+import { Check, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface ScheduleCardProps {
   schedule: any;
@@ -16,8 +16,10 @@ interface ScheduleCardProps {
 
 export function ScheduleCard({ schedule, dayLabel }: ScheduleCardProps) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [finalAmount, setFinalAmount] = useState<number>(schedule.estimatedCost || 0);
-  const confirmEventExecution = useMutation(api.schedules.confirmEventExecution);
+  const [finalAmount, setFinalAmount] = useState<number>(
+    schedule.estimatedCost || 0,
+  );
+  const confirmSpending = useMutation(api.schedules.confirmSpending);
   const date = new Date(schedule.dateTime);
 
   useEffect(() => {
@@ -35,9 +37,9 @@ export function ScheduleCard({ schedule, dayLabel }: ScheduleCardProps) {
 
   const handleConfirm = async () => {
     try {
-      await confirmEventExecution({ 
+      await confirmSpending({
         scheduleId: schedule._id,
-        optionalFinalAmount: finalAmount > 0 ? finalAmount : undefined
+        actualAmount: finalAmount > 0 ? finalAmount : 0,
       });
     } catch (e) {
       console.error("Failed to confirm event:", e);
@@ -46,7 +48,7 @@ export function ScheduleCard({ schedule, dayLabel }: ScheduleCardProps) {
 
   const formatTimeLeft = (ms: number) => {
     if (ms <= 0) return "Sekarang";
-    
+
     const seconds = Math.floor((ms / 1000) % 60);
     const minutes = Math.floor((ms / 1000 / 60) % 60);
     const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
@@ -60,17 +62,25 @@ export function ScheduleCard({ schedule, dayLabel }: ScheduleCardProps) {
   const isExpired = timeLeft !== null && timeLeft <= 0;
 
   return (
-    <div className={cn(
-      "group flex flex-col p-3 rounded-lg transition-colors border border-transparent hover:border-border/50 bg-muted/20",
-      schedule.status === "done" && "opacity-60 bg-muted/30 hover:bg-muted/30"
-    )}>
+    <div
+      className={cn(
+        "group flex flex-col p-3 rounded-lg transition-colors border border-transparent hover:border-border/50 bg-muted/20",
+        schedule.status === "done" &&
+          "opacity-60 bg-muted/30 hover:bg-muted/30",
+      )}
+    >
       <div className="flex justify-between items-start mb-2">
         <div className="flex items-center gap-2 overflow-hidden">
-          {schedule.status === "done" && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-          <span className={cn(
-            "text-sm font-semibold leading-none truncate",
-            schedule.status === "done" && "line-through decoration-muted-foreground/50 text-muted-foreground"
-          )}>
+          {schedule.status === "done" && (
+            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+          )}
+          <span
+            className={cn(
+              "text-sm font-semibold leading-none truncate",
+              schedule.status === "done" &&
+                "line-through decoration-muted-foreground/50 text-muted-foreground",
+            )}
+          >
             {schedule.title}
           </span>
         </div>
@@ -78,12 +88,16 @@ export function ScheduleCard({ schedule, dayLabel }: ScheduleCardProps) {
           {format(date, "HH:mm")}
         </span>
       </div>
-      
+
       <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
         <span>{dayLabel}</span>
-        {schedule.location && <span className="truncate max-w-[100px]">📍 {schedule.location}</span>}
+        {schedule.location && (
+          <span className="truncate max-w-[100px]">📍 {schedule.location}</span>
+        )}
         {schedule.estimatedCost && (
-          <span className="text-orange-500 font-medium">Rp{schedule.estimatedCost.toLocaleString()}</span>
+          <span className="text-orange-500 font-medium">
+            Rp{schedule.estimatedCost.toLocaleString()}
+          </span>
         )}
       </div>
 
@@ -101,18 +115,22 @@ export function ScheduleCard({ schedule, dayLabel }: ScheduleCardProps) {
                 <span>Waktu sudah lewat, konfirmasi pengeluaran aktual:</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-medium w-6">Rp</span>
+                <span className="text-xs text-muted-foreground font-medium w-6">
+                  Rp
+                </span>
                 <Input
                   type="number"
                   value={finalAmount || ""}
-                  onChange={(e) => setFinalAmount(parseInt(e.target.value) || 0)}
+                  onChange={(e) =>
+                    setFinalAmount(parseInt(e.target.value) || 0)
+                  }
                   className="h-8 text-xs font-medium"
                   placeholder="0"
                 />
               </div>
-              <Button 
-                onClick={handleConfirm} 
-                size="sm" 
+              <Button
+                onClick={handleConfirm}
+                size="sm"
                 className="w-full text-xs font-bold bg-primary hover:bg-primary/90 text-primary-foreground h-8 mt-1"
               >
                 KONFIRMASI SEKARANG

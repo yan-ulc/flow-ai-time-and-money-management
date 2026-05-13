@@ -459,7 +459,7 @@ export function CalendarDashboard() {
         schedule={confirmingSchedule}
         open={!!confirmingSchedule}
         onOpenChange={(open: boolean) => !open && setConfirmingSchedule(null)}
-        onConfirm={async (amount) => {
+        onConfirm={async (amount: number) => {
           try {
             await confirmExpense({
               scheduleId: confirmingSchedule._id,

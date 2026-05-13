@@ -1,12 +1,16 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { cubicBezier, motion } from "framer-motion";
 import { Bot, HeartHandshake, Shield, Zap } from "lucide-react";
 import { useState } from "react";
 
 const COPY_VARIANTS = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: cubicBezier(0.16, 1, 0.3, 1) },
+  },
 };
 
 type Persona = {
@@ -126,7 +130,10 @@ export function AICompanionSection() {
                   <motion.div
                     className={`absolute inset-0 ${persona.glow} opacity-0`}
                     animate={{ opacity: isActive ? 0.4 : 0 }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    transition={{
+                      duration: 0.6,
+                      ease: cubicBezier(0.16, 1, 0.3, 1),
+                    }}
                   />
                   <div className="relative">
                     <div className="flex items-center justify-between">

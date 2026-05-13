@@ -1,12 +1,16 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { cubicBezier, motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 const COPY_VARIANTS = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: cubicBezier(0.16, 1, 0.3, 1) },
+  },
 };
 
 export function FinalCTASection() {
@@ -39,7 +43,7 @@ export function FinalCTASection() {
           className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-200/70"
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
+          transition={{ duration: 0.7, ease: cubicBezier(0.16, 1, 0.3, 1) }}
           viewport={{ once: true, amount: 0.6 }}
         >
           <Sparkles className="h-4 w-4 text-emerald-200" />
