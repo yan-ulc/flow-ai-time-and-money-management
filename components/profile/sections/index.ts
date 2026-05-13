@@ -1,0 +1,9 @@
+export { AICompanionSection } from "./AICompanionSection";
+export { FinancialIdentitySection } from "./FinancialIdentitySection";
+export { PreferencesSecuritySection } from "./PreferencesSecuritySection";
+export { ProfileColumns } from "./ProfileColumns";
+export { ProfileHero } from "./ProfileHero";
+export { ProfileLoadingState } from "./ProfileLoadingState";
+export { RecentActivitySection } from "./RecentActivitySection";
+export { SignOutSection } from "./SignOutSection";
+export { SmartInsightsSection } from "./SmartInsightsSection";
