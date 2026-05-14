@@ -32,16 +32,6 @@ export function HeroMockup() {
         animate={{ y: [0, -6, 0] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
       >
-        <div className="flex items-center justify-between border-b border-white/10 pb-4 text-xs text-slate-200/70">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-cyan-200" />
-            FlowAI Live System
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-300/80" />
-            Syncing
-          </div>
-        </div>
 
         <div className="mt-5 grid grid-cols-12 gap-4">
           <div className="col-span-12 md:col-span-6 rounded-2xl border border-white/10 bg-white/5 p-4">
