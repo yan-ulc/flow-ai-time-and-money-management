@@ -16,7 +16,7 @@ const COPY_VARIANTS = {
 export function HeroCopy() {
   return (
     <motion.div
-      className="flex flex-col gap-7"
+      className="flex flex-col items-center text-center gap-7"
       variants={{
         hidden: {},
         visible: { transition: { staggerChildren: 0.12 } },
