@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<div style="width:100%;height:680px;background:#05060a;position:relative;overflow:hidden;font-family:'Georgia',serif;">
+
+<svg id="lightSvg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;" preserveAspectRatio="none">
+<defs>
+  <filter id="beamBlur" x="-40%" y="-10%" width="180%" height="120%">
+    <feGaussianBlur stdDeviation="4 10"/>
+  </filter>
+  <filter id="hazeBlur" x="-50%" y="-20%" width="200%" height="140%">
+    <feGaussianBlur stdDeviation="20 24"/>
+  </filter>
+  <filter id="poolBlur" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="22"/>
+  </filter>
+  <filter id="sourceBloom" x="-200%" y="-200%" width="500%" height="500%">
+    <feGaussianBlur stdDeviation="12"/>
+  </filter>
+  <filter id="coreGlow" x="-300%" y="-300%" width="700%" height="700%">
+    <feGaussianBlur stdDeviation="3"/>
+  </filter>
+  <filter id="fringeBlur" x="-30%" y="-10%" width="160%" height="120%">
+    <feGaussianBlur stdDeviation="6 8"/>
+  </filter>
+  <filter id="wallNoise" x="0%" y="0%" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.72 0.68" numOctaves="4" stitchTiles="stitch" result="noise"/>
+    <feColorMatrix type="saturate" values="0" in="noise" result="gn"/>
+    <feBlend in="SourceGraphic" in2="gn" mode="overlay" result="b"/>
+    <feComponentTransfer in="b"><feFuncA type="linear" slope="0.05"/></feComponentTransfer>
+  </filter>
+</defs>
+
+<!-- wall texture -->
+<rect id="wallTex" x="0" y="0" width="100%" height="100%" fill="transparent" filter="url(#wallNoise)" style="mix-blend-mode:overlay" opacity="0.45"/>
+
+<!-- volumetric haze — widest, softest -->
+<polygon id="hazeLayer" style="mix-blend-mode:screen;" filter="url(#hazeBlur)" fill="url(#hazeGrad)" opacity="0.85"/>
+
+<!-- primary beam -->
+<polygon id="beamLayer" style="mix-blend-mode:screen;" filter="url(#beamBlur)" fill="url(#beamGrad)" opacity="0.90"/>
+
+<!-- left caustic fringe -->
+<polygon id="fringeL" style="mix-blend-mode:screen;" filter="url(#fringeBlur)" fill="url(#fringeGrad)" opacity="0.50"/>
+<!-- right caustic fringe -->
+<polygon id="fringeR" style="mix-blend-mode:screen;" filter="url(#fringeBlur)" fill="url(#fringeGrad)" opacity="0.50"/>
+
+<!-- terminus pool -->
+<ellipse id="poolOuter" style="mix-blend-mode:screen;" filter="url(#poolBlur)" fill="url(#poolGrad)" opacity="0.72"/>
+<ellipse id="poolInner" style="mix-blend-mode:screen;" filter="url(#poolBlur)" fill="#f5e090" opacity="0.14"/>
+
+<!-- source bloom layers -->
+<ellipse id="bloomAura" style="mix-blend-mode:screen;" filter="url(#sourceBloom)" fill="#fff8e8" opacity="0.55"/>
+<ellipse id="bloomMid" style="mix-blend-mode:screen;" filter="url(#sourceBloom)" fill="#fffaf0" opacity="0.80"/>
+<circle id="bloomCore" style="mix-blend-mode:screen;" filter="url(#coreGlow)" fill="#ffffff" opacity="0.98"/>
+<!-- lens flare stretch -->
+<ellipse id="lensFlare" style="mix-blend-mode:screen;" fill="#fffae0" opacity="0.18"/>
+
+<!-- vignette -->
+<rect id="vignette" x="0" y="0" width="100%" height="100%" fill="url(#vigGrad)" style="mix-blend-mode:multiply"/>
+
+<!-- lamp housing -->
+<g id="lampHousing">
+  <rect id="mountArm" rx="2" fill="#111"/>
+  <circle id="mountBolt" fill="#0d0d0d" stroke="#222" stroke-width="0.5"/>
+  <rect id="housingBody" rx="4" fill="#1a1a1a" stroke="#2e2e2e" stroke-width="1"/>
+  <ellipse id="housingDish" fill="#252420" stroke="#333" stroke-width="0.5"/>
+  <rect id="housingSpec" rx="1" fill="#444" opacity="0.6"/>
+</g>
+
+</svg>
+
+<!-- dust canvas -->
+<canvas id="dustCanvas" style="position:absolute;inset:0;mix-blend-mode:screen;opacity:0.85;pointer-events:none;"></canvas>
+
+<!-- hero content -->
+<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;user-select:none;">
+  <p style="font-size:10px;letter-spacing:0.38em;text-transform:uppercase;color:#6a5d44;margin:0 0 16px;font-family:monospace;">Cinematic Spotlight System</p>
+  <h1 style="font-size:clamp(2rem,5vw,4rem);font-weight:300;letter-spacing:-0.02em;color:#d8c9a8;margin:0 0 10px;line-height:1.1;">Light the dark.</h1>
+  <p style="font-size:clamp(0.8rem,1.5vw,1rem);color:#554839;letter-spacing:0.03em;max-width:340px;margin:0 auto;">Volumetric. Atmospheric. Physically real.</p>
+</div>
+
+<script>
+(function(){
+  const svg = document.getElementById('lightSvg');
+  const canvas = document.getElementById('dustCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // Config
+  const CFG = {
+    sourceXr: 0.11,
+    sourceYr: 0.04,
+    angleDeg: 17,
+    coneAngle: 13,
+    reachR: 0.88,
+    intensity: 1
+  };
+
+  let W = 0, H = 0;
+  let particles = [];
+  let raf1, raf2;
+  let t = 0, lastT = 0;
+  let flicker = 1, drift = 0, bloom = 1;
+
+  function resize(){
+    const rect = document.querySelector('div').getBoundingClientRect();
+    W = window.innerWidth; H = 680;
+    canvas.width = W; canvas.height = H;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    initParticles();
+    updateSVG();
+  }
+
+  function geom(driftDeg){
+    const ar = ((CFG.angleDeg + driftDeg) * Math.PI) / 180;
+    const sx = CFG.sourceXr * W;
+    const sy = CFG.sourceYr * H;
+    const reach = CFG.reachR * H;
+    const cr = (CFG.coneAngle * Math.PI) / 180;
+    const tipX = sx + Math.sin(ar) * reach;
+    const tipY = sy + Math.cos(ar) * reach;
+    const hw = Math.tan(cr) * reach;
+    const px = Math.cos(ar), py = -Math.sin(ar);
+    const nw = 5;
+    return { sx, sy, tipX, tipY, hw, px, py, nw, ar, reach, cr };
+  }
+
+  function pts(g, scale=1){
+    const {sx,sy,tipX,tipY,hw,px,py,nw} = g;
+    return [
+      [sx - px*nw, sy - py*nw],
+      [sx + px*nw, sy + py*nw],
+      [tipX + px*hw*scale, tipY + py*hw*scale],
+      [tipX - px*hw*scale, tipY - py*hw*scale]
+    ].map(p=>p.join(',')).join(' ');
+  }
+
+  function updateSVG(){
+    const g = geom(drift);
+    const {sx,sy,tipX,tipY,hw,px,py,nw,ar} = g;
+
+    // Update gradients
+    let defs = svg.querySelector('defs');
+
+    function upsertLG(id, x1,y1,x2,y2, stops){
+      let el = svg.getElementById(id);
+      if(!el){
+        el = document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+        el.setAttribute('id',id);
+        el.setAttribute('gradientUnits','userSpaceOnUse');
+        defs.appendChild(el);
+      }
+      el.setAttribute('x1',x1); el.setAttribute('y1',y1);
+      el.setAttribute('x2',x2); el.setAttribute('y2',y2);
+      el.innerHTML = stops.map(([o,c,a])=>`<stop offset="${o}" stop-color="${c}" stop-opacity="${a}"/>`).join('');
+    }
+
+    function upsertRG(id, cx,cy,rx,ry, stops){
+      let el = svg.getElementById(id);
+      if(!el){
+        el = document.createElementNS('http://www.w3.org/2000/svg','radialGradient');
+        el.setAttribute('id',id);
+        el.setAttribute('gradientUnits','userSpaceOnUse');
+        defs.appendChild(el);
+      }
+      el.setAttribute('cx',cx); el.setAttribute('cy',cy);
+      el.setAttribute('rx',rx); el.setAttribute('ry',ry);
+      el.innerHTML = stops.map(([o,c,a])=>`<stop offset="${o}" stop-color="${c}" stop-opacity="${a}"/>`).join('');
+    }
+
+    upsertLG('beamGrad', sx,sy, tipX,tipY, [
+      ['0%','#f5eedc',0.90*flicker],['8%','#f0e8d0',0.76*flicker],
+      ['25%','#ede4c8',0.50*flicker],['50%','#e8ddb8',0.28*flicker],
+      ['75%','#e0d4a8',0.13*flicker],['90%','#d8c898',0.05*flicker],['100%','#c8b880',0]
+    ]);
+    upsertLG('hazeGrad', sx,sy, tipX,tipY, [
+      ['0%','#fff8e8',0],['15%','#fff0d0',0.20*flicker],
+      ['45%','#ffeabc',0.12*flicker],['80%','#ffe090',0.05*flicker],['100%','#ffd860',0]
+    ]);
+    upsertLG('fringeGrad', sx,sy, tipX,tipY, [
+      ['0%','#ffcc80',0],['20%','#ffb84a',0.26*flicker],
+      ['55%','#ff9e30',0.14*flicker],['85%','#ff8800',0.04*flicker],['100%','#ff6600',0]
+    ]);
+    upsertRG('poolGrad', tipX,tipY, hw*0.9,hw*0.22, [
+      ['0%','#f5e8c0',0.36*flicker],['35%','#f0de9a',0.17*flicker],
+      ['70%','#e8d070',0.07*flicker],['100%','#d8b840',0]
+    ]);
+    upsertRG('vigGrad', sx,sy, Math.max(W,H)*0.85, Math.max(W,H)*0.85, [
+      ['0%','#000',0],['40%','#000',0.15],['100%','#000',0.72]
+    ]);
+
+    // Beam polygons
+    svg.getElementById('beamLayer').setAttribute('points', pts(g,1));
+    svg.getElementById('hazeLayer').setAttribute('points', pts(g,1.38));
+
+    // Caustic fringes
+    const fL = svg.getElementById('fringeL');
+    const fR = svg.getElementById('fringeR');
+    const {tipX:tx,tipY:ty} = g;
+    fL.setAttribute('points',[
+      [sx-px*nw*0.3, sy-py*nw*0.3],[sx+px*nw*0.5, sy+py*nw*0.5],
+      [tx-px*hw+px*16, ty-py*hw+py*16],[tx-px*hw-px*12, ty-py*hw-py*12]
+    ].map(p=>p.join(',')).join(' '));
+    fR.setAttribute('points',[
+      [sx-px*nw*0.5, sy-py*nw*0.5],[sx+px*nw*0.3, sy+py*nw*0.3],
+      [tx+px*hw+px*12, ty+py*hw+py*12],[tx+px*hw-px*16, ty+py*hw-py*16]
+    ].map(p=>p.join(',')).join(' '));
+
+    // Pool
+    const poolRot = (CFG.angleDeg+drift);
+    const poolEl = svg.getElementById('poolOuter');
+    poolEl.setAttribute('cx', tx); poolEl.setAttribute('cy', ty);
+    poolEl.setAttribute('rx', hw*0.9); poolEl.setAttribute('ry', hw*0.23);
+    poolEl.setAttribute('transform',`rotate(${poolRot},${tx},${ty})`);
+    const p2 = svg.getElementById('poolInner');
+    p2.setAttribute('cx', tx); p2.setAttribute('cy', ty);
+    p2.setAttribute('rx', hw*1.65); p2.setAttribute('ry', hw*0.45);
+    p2.setAttribute('transform',`rotate(${poolRot},${tx},${ty})`);
+
+    // Source bloom
+    const bm = bloom;
+    const ba = svg.getElementById('bloomAura');
+    ba.setAttribute('cx',sx); ba.setAttribute('cy',sy);
+    ba.setAttribute('rx',30*bm); ba.setAttribute('ry',23*bm);
+    const bm2 = svg.getElementById('bloomMid');
+    bm2.setAttribute('cx',sx); bm2.setAttribute('cy',sy);
+    bm2.setAttribute('rx',14*bm); bm2.setAttribute('ry',11*bm);
+    const bc = svg.getElementById('bloomCore');
+    bc.setAttribute('cx',sx); bc.setAttribute('cy',sy);
+    bc.setAttribute('r', 4.5*bm);
+    const lf = svg.getElementById('lensFlare');
+    lf.setAttribute('cx',sx); lf.setAttribute('cy',sy);
+    lf.setAttribute('rx',60*bm); lf.setAttribute('ry',1.5);
+
+    // Lamp housing
+    const arm = svg.getElementById('mountArm');
+    arm.setAttribute('x',sx-3); arm.setAttribute('y',sy-42);
+    arm.setAttribute('width',6); arm.setAttribute('height',22);
+    const bolt = svg.getElementById('mountBolt');
+    bolt.setAttribute('cx',sx); bolt.setAttribute('cy',sy-42); bolt.setAttribute('r',4);
+    const body = svg.getElementById('housingBody');
+    body.setAttribute('x',sx-15); body.setAttribute('y',sy-25);
+    body.setAttribute('width',30); body.setAttribute('height',22);
+    const dish = svg.getElementById('housingDish');
+    dish.setAttribute('cx',sx); dish.setAttribute('cy',sy-4);
+    dish.setAttribute('rx',14); dish.setAttribute('ry',5);
+    const spec = svg.getElementById('housingSpec');
+    spec.setAttribute('x',sx-12); spec.setAttribute('y',sy-22);
+    spec.setAttribute('width',9); spec.setAttribute('height',1.5);
+  }
+
+  // Particles
+  function initParticles(){
+    const g = geom(0);
+    particles = [];
+    for(let i=0;i<60;i++) spawnParticle(g, Math.random());
+  }
+
+  function spawnParticle(g, progress=0){
+    const {sx,sy,ar,reach,cr,px,py} = g;
+    const t2 = 0.1 + Math.random()*0.9;
+    const bx = sx + Math.sin(ar)*reach*t2;
+    const by = sy + Math.cos(ar)*reach*t2;
+    const hw2 = Math.tan(cr)*reach*t2;
+    const sp = (Math.random()-0.5)*2*hw2*0.82;
+    return {
+      x: bx + Math.cos(ar)*sp,
+      y: by - Math.sin(ar)*sp,
+      vx: (Math.random()-0.5)*0.16,
+      vy: -0.05 - Math.random()*0.11,
+      size: 0.5 + Math.random()*1.1,
+      opacity: 0,
+      opacityTarget: 0.025 + Math.random()*0.08,
+      opacitySpeed: 0.003 + Math.random()*0.004,
+      life: progress,
+    };
+  }
+
+  function animateDust(){
+    ctx.clearRect(0,0,W,H);
+    const g = geom(drift);
+    const {sx,sy,ar,reach,cr} = g;
+
+    particles.forEach((p,i) => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life += 0.0018;
+
+      if(p.opacity < p.opacityTarget) p.opacity += p.opacitySpeed;
+      else p.opacity -= p.opacitySpeed * 0.55;
+
+      const dx = p.x - sx, dy = p.y - sy;
+      const tVal = (dx*Math.sin(ar) + dy*Math.cos(ar)) / reach;
+      const perp = Math.abs(-dx*Math.cos(ar) + dy*Math.sin(ar));
+      const hw = Math.tan(cr)*reach*tVal;
+
+      if(tVal<0 || tVal>1.06 || perp>hw*1.12 || p.life>1){
+        particles[i] = spawnParticle(g);
+        return;
+      }
+
+      const fo = p.opacity * flicker * CFG.intensity;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,228,172,${fo})`;
+      ctx.fill();
+    });
+
+    raf2 = requestAnimationFrame(animateDust);
+  }
+
+  // Main animation loop
+  function animateSVG(now){
+    const dt = (now - lastT) / 1000;
+    lastT = now;
+    t += dt;
+
+    flicker = 0.984
+      + 0.006*Math.sin(t*7.3)
+      + 0.004*Math.sin(t*13.7)
+      + 0.003*Math.sin(t*31.1)
+      + 0.002*Math.sin(t*53.9);
+
+    drift = 0.42*Math.sin(t*0.17) + 0.26*Math.sin(t*0.29+1.1);
+    bloom = 1 + 0.018*Math.sin(t*0.91) + 0.008*Math.sin(t*2.33);
+
+    updateSVG();
+    raf1 = requestAnimationFrame(animateSVG);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  lastT = performance.now();
+  raf1 = requestAnimationFrame(animateSVG);
+  raf2 = requestAnimationFrame(animateDust);
+})();
+</script>
+</div>
