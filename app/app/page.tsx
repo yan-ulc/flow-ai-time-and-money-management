@@ -15,7 +15,9 @@ export default function AppPage() {
       </div>
 
       {/* Main Chat Area (70%) */}
-      <div className="flex-1 flex flex-col min-w-0 h-full relative rounded-none lg:rounded-3xl lg:border lg:border-border/50 lg:bg-background/40 lg:backdrop-blur-xl lg:shadow-2xl lg:shadow-black/5 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-full relative rounded-none lg:rounded-3xl lg:border lg:border-border lg:bg-card/90 lg:backdrop-blur-3xl shadow-xl dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] overflow-hidden">
+        {/* Inner top highlight for physical edge */}
+        <div className="hidden lg:block absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.15] to-transparent pointer-events-none opacity-0 dark:opacity-100" />
         <ChatPanel />
       </div>
 

@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 import { cn, formatCurrency } from "@/lib/utils";
 import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, CreditCard, Coffee, ShoppingBag, Car, Loader2, Shield, Clock, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { 
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart, Pie, ComposedChart, ReferenceLine, Legend
@@ -127,17 +128,22 @@ export function StatsDashboard() {
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Financial Operating System</h1>
           <p className="text-muted-foreground mt-1.5 text-sm font-medium opacity-80">Predictive intelligence & cashflow analytics.</p>
         </div>
-        <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-2xl border border-border/40 shadow-sm">
-          <button onClick={() => setMonthContext(subMonths(monthContext, 1))} className="p-2 hover:bg-background rounded-xl transition-all text-muted-foreground hover:text-foreground"><ChevronLeft className="w-4 h-4" /></button>
-          <span className="w-32 text-center font-semibold tracking-wider text-sm">{format(monthContext, "MMMM yyyy")}</span>
-          <button onClick={() => setMonthContext(addMonths(monthContext, 1))} className="p-2 hover:bg-background rounded-xl transition-all text-muted-foreground hover:text-foreground"><ChevronRight className="w-4 h-4" /></button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-2xl border border-border/40 shadow-sm">
+            <button onClick={() => setMonthContext(subMonths(monthContext, 1))} className="p-2 hover:bg-background rounded-xl transition-all text-muted-foreground hover:text-foreground"><ChevronLeft className="w-4 h-4" /></button>
+            <span className="w-32 text-center font-semibold tracking-wider text-sm">{format(monthContext, "MMMM yyyy")}</span>
+            <button onClick={() => setMonthContext(addMonths(monthContext, 1))} className="p-2 hover:bg-background rounded-xl transition-all text-muted-foreground hover:text-foreground"><ChevronRight className="w-4 h-4" /></button>
+          </div>
+          <div className="flex-shrink-0">
+            <ThemeToggle variant="icon" buttonSize={36} />
+          </div>
         </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-2">
         {/* Card 1 — Balance Card (Primary) */}
-        <div className="rounded-[1.5rem] bg-gradient-to-br from-background to-muted/20 border border-border/40 p-6 shadow-sm relative overflow-hidden">
+        <div className="skeuo-card-base skeuo-glow-emerald p-6 relative overflow-hidden">
           <div className="flex items-center gap-2 text-muted-foreground mb-3">
             <Wallet className="w-4 h-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Total Balance</span>
@@ -152,7 +158,7 @@ export function StatsDashboard() {
         </div>
 
         {/* Card 2 — In-Flow Card */}
-        <div className="rounded-[1.5rem] bg-background border border-border/40 p-6 shadow-sm">
+        <div className="skeuo-card-base skeuo-glow-emerald p-6">
           <div className="flex items-center gap-2 text-emerald-500/80 mb-3">
             <ArrowUpRight className="w-4 h-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">In-Flow</span>
@@ -162,7 +168,7 @@ export function StatsDashboard() {
         </div>
 
         {/* Card 3 — Out-Flow Card */}
-        <div className="rounded-[1.5rem] bg-background border border-border/40 p-6 shadow-sm">
+        <div className="skeuo-card-base skeuo-glow-zinc p-6">
           <div className="flex items-center gap-2 text-rose-500/80 mb-3">
             <ArrowDownRight className="w-4 h-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Out-Flow</span>
@@ -172,7 +178,7 @@ export function StatsDashboard() {
         </div>
 
         {/* Card 4 — Burn Rate Card */}
-        <div className="rounded-[1.5rem] bg-background border border-border/40 p-6 shadow-sm">
+        <div className="skeuo-card-base skeuo-glow-amber p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 text-orange-500/80">
               <TrendingUp className="w-4 h-4" />
@@ -196,7 +202,7 @@ export function StatsDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
         
         {/* ROW 1 LEFT — CASH FLOW (70%) */}
-        <div className="lg:col-span-2 rounded-[1.5rem] bg-background border border-border/40 p-7 shadow-sm flex flex-col h-full">
+        <div className="skeuo-card-base skeuo-glow-zinc lg:col-span-2 p-7 flex flex-col h-full">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
               <h3 className="text-lg font-semibold tracking-tight">Cash Flow Analysis</h3>
@@ -243,7 +249,7 @@ export function StatsDashboard() {
         </div>
 
         {/* ROW 1 RIGHT — LEAK DETECTOR (30%) */}
-        <div className="rounded-[1.5rem] bg-background border border-border/40 p-7 shadow-sm flex flex-col h-full">
+        <div className="skeuo-card-base skeuo-glow-purple p-7 flex flex-col h-full">
           <h3 className="text-lg font-semibold tracking-tight mb-1">Leak Detector</h3>
           <p className="text-xs font-medium text-muted-foreground opacity-80 mb-6">Where money goes ({granularity})</p>
           
@@ -302,7 +308,7 @@ export function StatsDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-7 mt-2">
         
         {/* ROW 2 LEFT — PREDICTIVE PATH (70%) */}
-        <div className="lg:col-span-2 rounded-[1.5rem] bg-background border border-border/40 p-7 shadow-sm flex flex-col h-full">
+        <div className="skeuo-card-base skeuo-glow-zinc lg:col-span-2 p-7 flex flex-col h-full">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h3 className="text-lg font-semibold tracking-tight">Financial Trajectory</h3>
@@ -352,7 +358,7 @@ export function StatsDashboard() {
         </div>
 
         {/* ROW 2 RIGHT — SMART INSIGHTS (30%) */}
-        <div className="rounded-[1.5rem] bg-gradient-to-b from-primary/5 via-background to-background border border-primary/20 p-7 shadow-sm flex flex-col h-full">
+        <div className="skeuo-card-base skeuo-glow-purple p-7 flex flex-col h-full">
           <div className="flex items-center gap-2 mb-6">
             <Shield className="w-5 h-5 text-primary" />
             <h3 className="text-lg font-semibold tracking-tight">AI Financial Logic</h3>
@@ -384,14 +390,14 @@ export function StatsDashboard() {
         </div>
       </div>
 
-        <div className="rounded-[1.5rem] bg-background border border-border/40 p-7 shadow-sm">
+        <div className="skeuo-card-base skeuo-glow-zinc p-7">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
               <h3 className="text-lg font-semibold tracking-tight">Transaction Ledger</h3>
               <p className="text-xs font-medium text-muted-foreground opacity-80 mt-1">Past reality & Future obligations</p>
             </div>
             
-            <div className="flex gap-1.5 p-1 bg-muted/20 rounded-xl border border-border/40 overflow-x-auto no-scrollbar">
+            <div className="flex gap-1.5 p-1 bg-muted/20 rounded-xl border border-border/40 overflow-x-auto hide-scrollbar">
               {["all", "income", "expense", "planned", "pending"].map((t) => (
                 <button
                   key={t}

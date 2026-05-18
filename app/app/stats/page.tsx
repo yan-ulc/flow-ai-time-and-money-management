@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function StatsPage() {
   return (
-    <div className="flex-1 h-full overflow-y-auto">
+    <div className="flex-1 h-full overflow-y-auto hide-scrollbar">
       <StatsDashboard />
     </div>
   );

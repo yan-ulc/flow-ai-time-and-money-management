@@ -26,9 +26,11 @@ interface SpotlightSectionProps {
     coneAngle?: number;
     reachR?: number;
     intensity?: number;
+    sourceYr?: number;
   };
   lightOffset?: number;
   contentOffset?: number;
+  contentOffsetY?: number;
 }
 
 interface DustParticle {
@@ -55,18 +57,21 @@ export function SpotlightSection({
   config: userConfig,
   lightOffset = 0,
   contentOffset = 0,
+  contentOffsetY = 0,
 }: SpotlightSectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const gifContainerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<DustParticle[]>([]);
+  const gifCenterRef = useRef<number>(0);
   const [dims, setDims] = useState({ w: 1200, h: 800 });
   const uid = useId();
 
   // ─── Core Geometry Config ───
   const config = useMemo(() => ({
     sourceXr: 0.5, 
-    sourceYr: -0.1, // Higher source for sharper vertical angle
+    sourceYr: 0.05, // Lowered source so the lamp fixture is visible from the ceiling
     angleDeg: 0, // Perfectly vertical for all sections
     coneAngle: 24,
     reachR: 0.72,
@@ -74,18 +79,15 @@ export function SpotlightSection({
     ...userConfig
   }), [userConfig]);
 
-  const getSourceX = useCallback((w: number) => {
-    let base = w * 0.5;
-    if (layout === "left") base = w * 0.25;
-    if (layout === "right") base = w * 0.75;
-    return base + lightOffset;
-  }, [layout, lightOffset]);
+  const getSourceX = useCallback(() => {
+    return gifCenterRef.current + lightOffset;
+  }, [lightOffset]);
 
   const getGeom = useCallback((w: number, h: number, driftDeg: number) => {
     const ar = ((config.angleDeg + driftDeg) * Math.PI) / 180;
-    const sx = getSourceX(w);
+    const sx = getSourceX();
     const sy = config.sourceYr * h;
-    const reach = config.reachR * h;
+    const reach = (config.reachR * h) + contentOffsetY;
     const cr = (config.coneAngle * Math.PI) / 180;
     const tipX = sx + Math.sin(ar) * reach;
     const tipY = sy + Math.cos(ar) * reach;
@@ -139,6 +141,15 @@ export function SpotlightSection({
     let lastT = performance.now();
     let totalT = 0;
     let rafId: number;
+    let isVisible = false;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        isVisible = entries[0].isIntersecting;
+      },
+      { threshold: 0 }
+    );
+    io.observe(container);
 
     const resize = () => {
       w = container.clientWidth;
@@ -147,6 +158,19 @@ export function SpotlightSection({
       canvas.width = w;
       canvas.height = h;
       svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      
+      // Calculate exact center of the GIF for perfect lighting alignment
+      if (gifContainerRef.current) {
+        const cRect = container.getBoundingClientRect();
+        const gRect = gifContainerRef.current.getBoundingClientRect();
+        gifCenterRef.current = (gRect.left - cRect.left) + gRect.width / 2;
+      } else {
+        let base = w * 0.5;
+        if (layout === "left") base = w * 0.25;
+        if (layout === "right") base = w * 0.75;
+        gifCenterRef.current = base + contentOffset;
+      }
+
       const g = getGeom(w, h, 0);
       particlesRef.current = Array.from({ length: 45 }, () => spawnParticle(g, Math.random()));
     };
@@ -154,6 +178,12 @@ export function SpotlightSection({
     const update = (now: number) => {
       const dt = (now - lastT) / 1000;
       lastT = now;
+      
+      if (!isVisible) {
+        rafId = requestAnimationFrame(update);
+        return;
+      }
+      
       totalT += dt;
 
       const flicker = 0.98 + 0.02 * Math.sin(totalT * 10.5);
@@ -195,6 +225,20 @@ export function SpotlightSection({
         bc.setAttribute('r', (6 * bloom).toString());
       }
 
+      // Update Lamp Fixture
+      const lamp = svg.getElementById(`lampFixture-${uid}`);
+      if (lamp) {
+        lamp.setAttribute('transform', `translate(${sx}, ${sy})`);
+      }
+      const lampRim = svg.getElementById(`lampRim-${uid}`);
+      if (lampRim) {
+        lampRim.setAttribute('opacity', (0.7 * flicker).toString());
+      }
+      const lampBulb = svg.getElementById(`lampBulb-${uid}`);
+      if (lampBulb) {
+        lampBulb.setAttribute('opacity', (0.95 * flicker).toString());
+      }
+
       // Dust Rendering
       ctx.clearRect(0, 0, w, h);
       particlesRef.current.forEach((p, i) => {
@@ -232,6 +276,7 @@ export function SpotlightSection({
 
     return () => {
       ro.disconnect();
+      io.disconnect();
       cancelAnimationFrame(rafId);
     };
   }, [uid, getGeom, spawnParticle, config.intensity, profile.beamColor]);
@@ -266,13 +311,14 @@ export function SpotlightSection({
   return (
     <section 
       ref={containerRef}
-      className="relative w-full min-h-screen bg-[#05060a] overflow-hidden flex items-center justify-center py-20"
+      className="relative w-full min-h-screen flex items-center justify-center py-20 bg-transparent"
     >
       {/* ─── Stage Lighting Layers ─── */}
       <svg 
         ref={svgRef}
         className="absolute inset-0 w-full h-full pointer-events-none z-10" 
         preserveAspectRatio="none"
+        style={{ overflow: 'visible', willChange: 'transform', transform: 'translateZ(0)' }}
       >
         <defs>
           <filter id={`beamBlur-${uid}`} x="-40%" y="-10%" width="180%" height="120%">
@@ -306,46 +352,96 @@ export function SpotlightSection({
         <polygon id={`beamLayer-${uid}`} style={{ mixBlendMode: 'screen' }} filter={`url(#beamBlur-${uid})`} fill={`url(#beamGrad-${uid})`} opacity="0.92"/>
         <ellipse id={`poolOuter-${uid}`} style={{ mixBlendMode: 'screen' }} filter={`url(#poolBlur-${uid})`} fill={`url(#poolGrad-${uid})`} opacity="0.8"/>
         <circle id={`bloomCore-${uid}`} style={{ mixBlendMode: 'screen' }} fill="#ffffff" opacity="0.98" filter="blur(6px)"/>
+        
+        {/* Lamp Fixture */}
+        <g id={`lampFixture-${uid}`}>
+          {/* Reflector Body */}
+          <path d="M -45 5 C -45 -15, -15 -28, -6 -28 L 6 -28 C 15 -28, 45 -15, 45 5 Z" fill="#020617" stroke="#1e293b" strokeWidth="1" />
+          <ellipse cx="0" cy="5" rx="45" ry="12" fill="#000000" stroke="#1e293b" strokeWidth="1" />
+          
+          {/* Glowing inner rim representing reflection */}
+          <ellipse cx="0" cy="3" rx="24" ry="6" id={`lampRim-${uid}`} fill={profile.beamColor} opacity="0.8" style={{ mixBlendMode: 'screen' }} filter="blur(2px)" />
+          
+          {/* Bright bulb core */}
+          <circle cx="0" cy="5" r="8" id={`lampBulb-${uid}`} fill="#ffffff" opacity="0.98" filter="blur(4px)" style={{ mixBlendMode: 'screen' }} />
+        </g>
       </svg>
 
       {/* ─── Atmospheric Dust ─── */}
       <canvas 
         ref={canvasRef} 
         className="absolute inset-0 pointer-events-none z-20" 
-        style={{ mixBlendMode: 'screen', opacity: 0.7 }}
+        style={{ mixBlendMode: 'screen', opacity: 0.7, willChange: 'transform', transform: 'translateZ(0)' }}
       />
 
       {/* ─── Focal Content Layer ─── */}
       <div 
-        style={{ transform: `translateX(${contentOffset}px)` }}
         className={cn(
-          "container relative z-40 flex flex-col md:flex-row items-center gap-16 lg:gap-24 px-8",
-          layout === "right" && "md:flex-row-reverse",
-          layout === "center" && "flex-col text-center"
+          "container relative z-40 w-full px-8 mx-auto",
+          layout === "center" 
+            ? "flex flex-col items-center text-center gap-16" 
+            : "grid grid-cols-1 md:grid-cols-2 items-center gap-12 lg:gap-20"
         )}
       >
         
         {/* Holographic Exhibit Container */}
-        <motion.div 
-          style={{ 
-            scale: springScale, 
-            y: springY, 
-            opacity: gifOpacity,
-            rotateX: springRotate 
-          }}
+        <div 
+          ref={gifContainerRef}
           className={cn(
-            "relative w-full max-w-md group perspective-1000",
-            layout === "center" ? "mx-auto" : "flex-1"
+            "relative w-full",
+            layout === "center" ? "mx-auto max-w-md" : "flex justify-center",
+            layout === "right" ? "md:order-2" : "md:order-1"
           )}
+          style={{ transform: `translate(${contentOffset}px, ${contentOffsetY}px)` }}
         >
-          {/* Floor Shadow (Contact shadow) */}
-          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[90%] h-8 bg-black/80 blur-2xl rounded-full" />
+          <motion.div 
+            style={{ 
+              scale: springScale, 
+              y: springY, 
+              opacity: gifOpacity,
+              rotateX: springRotate 
+            }}
+            className="relative w-full max-w-md h-full group perspective-1000"
+          >
+          {/* ─── Dynamic Floor Shadow System ─── */}
+          <div className="absolute -bottom-30 left-1/2 -translate-x-1/2 w-[80%] h-12 pointer-events-none z-0">
+            {/* Deep Contact Shadow */}
+            <motion.div 
+              animate={{ 
+                scale: [1, 0.75, 1],
+                opacity: [0.5, 0.2, 0.5],
+                filter: ["blur(16px)", "blur(24px)", "blur(16px)"]
+              }}
+              transition={{ 
+                duration: 8, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+              className="absolute inset-0 bg-black/90 rounded-[100%]"
+            />
+            
+            {/* Color-Matched Ambient Glow */}
+            <motion.div 
+              animate={{ 
+                scale: [1.4, 1.1, 1.4],
+                opacity: [0.25, 0.1, 0.25],
+                filter: ["blur(32px)", "blur(48px)", "blur(32px)"]
+              }}
+              transition={{ 
+                duration: 8, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+              className="absolute inset-0 rounded-[100%]"
+              style={{ backgroundColor: profile.accentColor }}
+            />
+          </div>
           
           <motion.img 
             {...bounceY}
             src={gifPath} 
             alt={headline}
-            className="w-full h-full object-contain brightness-105 contrast-[1.02] relative z-10"
+            className="w-full h-full object-contain brightness-105 contrast-[1.02] relative z-10 drop-shadow-[0_15px_35px_rgba(0,0,0,0.4)]"
             loading="lazy"
           />
           
@@ -354,17 +450,16 @@ export function SpotlightSection({
             className="absolute inset-0 z-0 blur-[120px] opacity-20 pointer-events-none"
             style={{ backgroundColor: profile.accentColor }}
           />
-        </motion.div>
-
-          <div 
-            className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-[70%] h-16 blur-[60px] opacity-25 z-0"
-            style={{ backgroundColor: profile.accentColor }}
-          />
+          </motion.div>
+        </div>
 
         {/* Text Content Staging */}
         <div className={cn(
-          "flex-1 max-w-lg lg:max-w-xl",
-          layout === "center" && "max-w-3xl mt-16"
+          "flex flex-col justify-center",
+          layout === "center" ? "max-w-3xl items-center" : "max-w-xl",
+          layout === "right" ? "md:order-1" : "md:order-2",
+          layout === "left" && "md:pl-8",
+          layout === "right" && "md:pr-8"
         )}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -390,9 +485,6 @@ export function SpotlightSection({
           </motion.div>
         </div>
       </div>
-      
-      {/* Global Environmental Depth */}
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#05060a]/20 via-transparent to-[#05060a]/80" />
     </section>
   );
 }

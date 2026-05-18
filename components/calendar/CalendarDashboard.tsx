@@ -134,7 +134,7 @@ export function CalendarDashboard() {
       {/* Main Content Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar Grid (Takes up 2/3 on desktop) */}
-        <div className="lg:col-span-2 rounded-3xl bg-background/40 border border-border/50 p-6 backdrop-blur-xl flex flex-col">
+        <div className="lg:col-span-2 rounded-3xl p-6 flex flex-col bg-white border-[0.5px] border-black/5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.04),0_1px_3px_rgba(0,0,0,0.02)] dark:bg-zinc-900/80 dark:backdrop-blur-xl dark:border-[0.5px] dark:border-violet-500/15 dark:shadow-[0_0_40px_-10px_rgba(139,92,246,0.12)] transition-all">
           {/* Calendar Header Controls */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold">
@@ -161,7 +161,7 @@ export function CalendarDashboard() {
             {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
               <div
                 key={day}
-                className="text-center text-xs font-semibold text-muted-foreground py-2"
+                className="text-center text-xs font-semibold text-zinc-800 dark:text-zinc-200 py-2"
               >
                 {day}
               </div>
@@ -184,12 +184,12 @@ export function CalendarDashboard() {
                   onClick={() => setSelectedDate(day)}
                   className={cn(
                     "relative aspect-square flex flex-col items-center justify-center p-1 rounded-2xl text-sm transition-all cursor-pointer",
-                    !isCurrentMonth && "text-muted-foreground/30",
+                    !isCurrentMonth ? "text-zinc-400 dark:text-zinc-600" : "text-zinc-800 dark:text-zinc-200",
                     isCurrentMonth &&
                       !isSameDay(day, selectedDate) &&
-                      "hover:bg-muted/50 text-foreground",
+                      "hover:bg-zinc-100 dark:hover:bg-zinc-800/50",
                     isSameDay(day, selectedDate) &&
-                      "bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40",
+                      "bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/25 dark:shadow-[0_0_15px_rgba(255,255,255,0.2)] dark:border-[0.5px] dark:border-white/20 hover:shadow-primary/40",
                     isToday(day) &&
                       !isSameDay(day, selectedDate) &&
                       "ring-2 ring-primary/20",
@@ -237,9 +237,9 @@ export function CalendarDashboard() {
 
           <div className="flex flex-row lg:flex-col gap-3 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 hide-scrollbar w-full px-2 lg:px-0 snap-x snap-mandatory">
             {schedulesForDate.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-4 rounded-3xl bg-background/20 border border-dashed border-border/50 w-full">
-                <CalendarIcon className="w-8 h-8 text-muted-foreground/30 mb-2" />
-                <p className="text-sm text-muted-foreground text-center">
+              <div className="flex flex-col items-center justify-center py-12 px-4 rounded-3xl w-full bg-white/50 border-[0.5px] border-dashed border-black/10 dark:bg-zinc-900/30 dark:border-violet-500/20">
+                <CalendarIcon className="w-8 h-8 text-zinc-400 dark:text-zinc-600 mb-2" />
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center">
                   Empty day
                 </p>
               </div>
@@ -255,7 +255,7 @@ export function CalendarDashboard() {
                         : setSelectedSchedule(event)
                     }
                     className={cn(
-                      "flex-shrink-0 w-[280px] lg:w-full group p-5 rounded-3xl bg-background/40 border border-border/50 backdrop-blur-xl hover:border-primary/30 transition-all cursor-pointer relative overflow-hidden snap-center",
+                      "flex-shrink-0 w-[280px] lg:w-full group p-5 rounded-3xl transition-all cursor-pointer relative overflow-hidden snap-center bg-white border-[0.5px] border-black/5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.04),0_1px_3px_rgba(0,0,0,0.02)] dark:bg-zinc-900/80 dark:backdrop-blur-xl dark:border-[0.5px] dark:border-violet-500/15 dark:shadow-[0_0_40px_-10px_rgba(139,92,246,0.12)] hover:dark:border-violet-400/30",
                       isPendingConfirmation(event) &&
                         "ring-2 ring-amber-500/50 bg-amber-500/5 border-amber-500/20",
                     )}

@@ -28,8 +28,10 @@ export function BottomNav() {
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          className="flex items-center gap-1 md:gap-2 px-3 py-2 rounded-full bg-background/60 backdrop-blur-xl border border-border/50 shadow-2xl shadow-black/10 dark:shadow-black/40"
+          className="relative flex items-center gap-1 md:gap-2 px-3 py-2 rounded-full bg-white border-[0.5px] border-black/5 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] dark:bg-[#121212] dark:border-white/10 dark:shadow-[0_10px_40px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-3xl transition-all duration-300"
         >
+          {/* Inner top highlight */}
+          <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.15] to-transparent pointer-events-none rounded-t-full opacity-0 dark:opacity-100" />
           {navItems.slice(0, 2).map((item) => {
             const isActive = pathname === item.href;
             return (

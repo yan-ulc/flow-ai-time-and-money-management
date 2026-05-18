@@ -8,6 +8,7 @@ import { useMutation } from "convex/react";
 import { format } from "date-fns";
 import { Check, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface ScheduleCardProps {
   schedule: any;
@@ -16,6 +17,7 @@ interface ScheduleCardProps {
 
 export function ScheduleCard({ schedule, dayLabel }: ScheduleCardProps) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [finalAmount, setFinalAmount] = useState<number>(
     schedule.estimatedCost || 0,
   );
@@ -36,13 +38,23 @@ export function ScheduleCard({ schedule, dayLabel }: ScheduleCardProps) {
   }, [schedule.dateTime, schedule.status]);
 
   const handleConfirm = async () => {
+    if (isConfirming) {
+      toast.info("Jadwal ini sudah dikonfirmasi. Mohon tunggu proses selesai.");
+      return;
+    }
+    setIsConfirming(true);
     try {
       await confirmSpending({
         scheduleId: schedule._id,
         actualAmount: finalAmount > 0 ? finalAmount : 0,
       });
+      toast.success("Pengeluaran berhasil dicatat!");
+      // Do not reset isConfirming on success so the button remains disabled
+      // until the parent component updates the schedule status.
     } catch (e) {
       console.error("Failed to confirm event:", e);
+      toast.error("Gagal mengonfirmasi pengeluaran.");
+      setIsConfirming(false);
     }
   };
 
@@ -124,16 +136,22 @@ export function ScheduleCard({ schedule, dayLabel }: ScheduleCardProps) {
                   onChange={(e) =>
                     setFinalAmount(parseInt(e.target.value) || 0)
                   }
-                  className="h-8 text-xs font-medium"
+                  disabled={isConfirming}
+                  className="h-8 text-xs font-medium disabled:opacity-50"
                   placeholder="0"
                 />
               </div>
               <Button
                 onClick={handleConfirm}
                 size="sm"
-                className="w-full text-xs font-bold bg-primary hover:bg-primary/90 text-primary-foreground h-8 mt-1"
+                className={cn(
+                  "w-full text-xs font-bold h-8 mt-1",
+                  isConfirming 
+                    ? "bg-muted text-muted-foreground hover:bg-muted cursor-not-allowed" 
+                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                )}
               >
-                KONFIRMASI SEKARANG
+                {isConfirming ? "MEMPROSES..." : "KONFIRMASI SEKARANG"}
               </Button>
             </div>
           )}
