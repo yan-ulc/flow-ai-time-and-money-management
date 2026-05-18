@@ -4,6 +4,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { Wallet, CalendarClock, Activity, Bell, Check, X, AlertTriangle, Clock, MapPin, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 interface ToolResponseUIProps {
   toolName: string;
@@ -12,6 +13,8 @@ interface ToolResponseUIProps {
 }
 
 export function ToolResponseUI({ toolName, toolResult, onSendMessage }: ToolResponseUIProps) {
+  const [isResponded, setIsResponded] = React.useState(false);
+
   // If we don't have the actual result yet (during optimistic update), just show a loading/action chip
   if (!toolResult) {
     return (
@@ -126,8 +129,23 @@ export function ToolResponseUI({ toolName, toolResult, onSendMessage }: ToolResp
       const isDelete = payload.action_type.includes("delete");
       const isUpdate = payload.action_type.includes("update");
 
-      const handleApprove = () => onSendMessage?.("oke lanjut");
-      const handleReject = () => onSendMessage?.("batal");
+      const handleApprove = () => {
+        if (isResponded) {
+          toast.info("Kartu ini sudah tidak berfungsi karena kamu sudah merespons.");
+          return;
+        }
+        setIsResponded(true);
+        onSendMessage?.("oke lanjut");
+      };
+      
+      const handleReject = () => {
+        if (isResponded) {
+          toast.info("Kartu ini sudah tidak berfungsi karena kamu sudah merespons.");
+          return;
+        }
+        setIsResponded(true);
+        onSendMessage?.("batal");
+      };
 
       return (
         <Card className={cn(
@@ -195,7 +213,10 @@ export function ToolResponseUI({ toolName, toolResult, onSendMessage }: ToolResp
             <div className="flex gap-2 pt-1">
               <Button 
                 size="sm" 
-                className="flex-1 h-8 text-xs gap-1.5"
+                className={cn(
+                  "flex-1 h-8 text-xs gap-1.5",
+                  isResponded ? "bg-muted text-muted-foreground hover:bg-muted cursor-not-allowed" : ""
+                )}
                 onClick={handleApprove}
               >
                 <Check className="h-3.5 w-3.5" /> Konfirmasi
@@ -203,7 +224,10 @@ export function ToolResponseUI({ toolName, toolResult, onSendMessage }: ToolResp
               <Button 
                 size="sm" 
                 variant="outline" 
-                className="flex-1 h-8 text-xs gap-1.5 border-muted-foreground/20"
+                className={cn(
+                  "flex-1 h-8 text-xs gap-1.5",
+                  isResponded ? "bg-muted text-muted-foreground border-transparent cursor-not-allowed" : "border-muted-foreground/20"
+                )}
                 onClick={handleReject}
               >
                 <X className="h-3.5 w-3.5" /> Batal

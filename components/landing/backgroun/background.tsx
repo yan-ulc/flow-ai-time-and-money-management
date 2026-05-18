@@ -2,18 +2,9 @@
 
 import React, { useEffect, useRef } from 'react';
 
-/**
- * ShaderBackground
- * 
- * A high-performance WebGL background component.
- * Uses a fragment shader to create a cinematic "plasma" effect with lines and particles.
- * 
- * Defaults to absolute positioning to fill its nearest relative container.
- */
-const ShaderBackground: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+const ShaderBackground = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Vertex shader source code
   const vsSource = `
     attribute vec4 aVertexPosition;
     void main() {
@@ -21,7 +12,6 @@ const ShaderBackground: React.FC = () => {
     }
   `;
 
-  // Fragment shader source code
   const fsSource = `
     precision highp float;
     uniform vec2 iResolution;
@@ -34,6 +24,7 @@ const ShaderBackground: React.FC = () => {
     const float minorLineWidth = 0.0125;
     const float majorLineFrequency = 5.0;
     const float minorLineFrequency = 1.0;
+    const vec4 gridColor = vec4(0.5);
     const float scale = 5.0;
     const vec4 lineColor = vec4(0.4, 0.2, 0.8, 1.0);
     const float minLineWidth = 0.01;
@@ -55,6 +46,16 @@ const ShaderBackground: React.FC = () => {
     #define drawCrispLine(pos, halfWidth, t) smoothstep(halfWidth + gridSmoothWidth, halfWidth, abs(pos - (t)))
     #define drawPeriodicLine(freq, width, t) drawCrispLine(freq / 2.0, width, abs(mod(t, freq) - (freq) / 2.0))
 
+    float drawGridLines(float axis) {
+      return drawCrispLine(0.0, axisWidth, axis)
+            + drawPeriodicLine(majorLineFrequency, majorLineWidth, axis)
+            + drawPeriodicLine(minorLineFrequency, minorLineWidth, axis);
+    }
+
+    float drawGrid(vec2 space) {
+      return min(1.0, drawGridLines(space.x) + drawGridLines(space.y));
+    }
+
     float random(float t) {
       return (cos(t) + cos(t * 1.3 + 1.3) + cos(t * 1.4 + 1.4)) / 3.0;
     }
@@ -65,8 +66,12 @@ const ShaderBackground: React.FC = () => {
 
     void main() {
       vec2 fragCoord = gl_FragCoord.xy;
-      vec2 uv = fragCoord / iResolution.xy;
-      vec2 space = (fragCoord - iResolution.xy / 2.0) / iResolution.x * 2.0 * scale;
+      vec4 fragColor;
+      vec2 uv = fragCoord.xy / iResolution.xy;
+      
+      // Fix for wave cut-off: use min(iResolution.x, iResolution.y) 
+      // instead of iResolution.x so the Y coordinates always fit within [-scale, scale]
+      vec2 space = (fragCoord - iResolution.xy / 2.0) / min(iResolution.x, iResolution.y) * 2.0 * scale;
 
       float horizontalFade = 1.0 - (cos(uv.x * 6.28) * 0.5 + 0.5);
       float verticalFade = 1.0 - (cos(uv.y * 6.28) * 0.5 + 0.5);
@@ -96,7 +101,7 @@ const ShaderBackground: React.FC = () => {
         lines += line * lineColor * rand;
       }
 
-      vec4 fragColor = mix(bgColor1, bgColor2, uv.x);
+      fragColor = mix(bgColor1, bgColor2, uv.x);
       fragColor *= verticalFade;
       fragColor.a = 1.0;
       fragColor += lines;
@@ -104,6 +109,42 @@ const ShaderBackground: React.FC = () => {
       gl_FragColor = fragColor;
     }
   `;
+
+  const loadShader = (gl: WebGLRenderingContext, type: number, source: string): WebGLShader | null => {
+    const shader = gl.createShader(type);
+    if (!shader) return null;
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      console.error('Shader compile error: ', gl.getShaderInfoLog(shader));
+      gl.deleteShader(shader);
+      return null;
+    }
+
+    return shader;
+  };
+
+  const initShaderProgram = (gl: WebGLRenderingContext, vsSource: string, fsSource: string): WebGLProgram | null => {
+    const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+    const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+    if (!vertexShader || !fragmentShader) return null;
+
+    const shaderProgram = gl.createProgram();
+    if (!shaderProgram) return null;
+
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+      console.error('Shader program link error: ', gl.getProgramInfoLog(shaderProgram));
+      return null;
+    }
+
+    return shaderProgram;
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -115,35 +156,8 @@ const ShaderBackground: React.FC = () => {
       return;
     }
 
-    // Helper to compile shader
-    const loadShader = (gl: WebGLRenderingContext, type: number, source: string) => {
-      const shader = gl.createShader(type);
-      if (!shader) return null;
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('Shader compile error: ', gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-      }
-      return shader;
-    };
-
-    // Initialize shader program
-    const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
-    const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
-    if (!vertexShader || !fragmentShader) return;
-
-    const shaderProgram = gl.createProgram();
+    const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
     if (!shaderProgram) return;
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragmentShader);
-    gl.linkProgram(shaderProgram);
-
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-      console.error('Shader program link error: ', gl.getProgramInfoLog(shaderProgram));
-      return;
-    }
 
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -167,56 +181,77 @@ const ShaderBackground: React.FC = () => {
     };
 
     const resizeCanvas = () => {
-      const displayWidth  = canvas.clientWidth;
+      // Use clientWidth/Height to match container size and prevent stretching
+      const displayWidth = canvas.clientWidth;
       const displayHeight = canvas.clientHeight;
+      
       if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-        canvas.width  = displayWidth;
+        canvas.width = displayWidth;
         canvas.height = displayHeight;
         gl.viewport(0, 0, canvas.width, canvas.height);
       }
     };
 
+    // Use ResizeObserver for more robust resizing based on parent container
     const resizeObserver = new ResizeObserver(() => resizeCanvas());
     resizeObserver.observe(canvas);
     resizeCanvas();
-
-    let rafId: number;
-    let startTime = Date.now();
     
+    let isVisible = true;
+    const visibilityObserver = new IntersectionObserver((entries) => {
+      isVisible = entries[0].isIntersecting;
+    });
+    visibilityObserver.observe(canvas);
+
+    let animFrameId: number;
+    let startTime = Date.now();
+
     const render = () => {
+      if (!isVisible) {
+        // Pause rendering, but still request next frame to wake up when visible
+        // Adjust start time to prevent massive time jumps when re-entering
+        startTime = Date.now() - ((Date.now() - startTime) % 1000); 
+        animFrameId = requestAnimationFrame(render);
+        return;
+      }
+      
       const currentTime = (Date.now() - startTime) / 1000;
 
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clear(gl.COLOR_BUFFER_BIT);
 
       gl.useProgram(programInfo.program);
+
       gl.uniform2f(programInfo.uniformLocations.resolution, canvas.width, canvas.height);
       gl.uniform1f(programInfo.uniformLocations.time, currentTime);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-      gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, 2, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribPointer(
+        programInfo.attribLocations.vertexPosition,
+        2,
+        gl.FLOAT,
+        false,
+        0,
+        0
+      );
       gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
 
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      rafId = requestAnimationFrame(render);
+      animFrameId = requestAnimationFrame(render);
     };
 
-    rafId = requestAnimationFrame(render);
+    animFrameId = requestAnimationFrame(render);
 
     return () => {
-      if (rafId) cancelAnimationFrame(rafId);
       resizeObserver.disconnect();
+      visibilityObserver.disconnect();
+      cancelAnimationFrame(animFrameId);
     };
-  }, [vsSource, fsSource]);
+  }, []);
 
   return (
-    <canvas 
-      ref={canvasRef} 
-      className="w-full h-full block" 
-    />
+    <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block pointer-events-none" />
   );
 };
-
-
 
 export default ShaderBackground;

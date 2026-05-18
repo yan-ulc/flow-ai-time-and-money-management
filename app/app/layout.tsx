@@ -5,12 +5,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-background text-foreground relative selection:bg-primary/20">
       {/* 
-        Layered Background Elements 
-        Provides a premium, soft depth to the app
+        Cinematic Lighting System
+        Provides soft ambient depth behind panels
       */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]" />
-        <div className="absolute top-[60%] -right-[10%] w-[40%] h-[60%] rounded-full bg-blue-500/5 blur-[120px]" />
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden bg-background">
+        <div className="absolute top-[10%] left-[20%] w-[40vw] h-[40vh] rounded-full bg-blue-500/10 blur-[120px] dark:mix-blend-screen" />
+        <div className="absolute bottom-[20%] right-[10%] w-[30vw] h-[50vh] rounded-full bg-purple-500/10 blur-[120px] dark:mix-blend-screen" />
+        {/* Subtle noise overlay for texture */}
+        <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
 
       {/* Main Content Area */}

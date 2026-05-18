@@ -20,17 +20,22 @@ export function CommandBar({ onSendMessage, isLoading }: CommandBarProps) {
   };
 
   return (
-    <div className="relative group">
-      <div className="absolute -inset-1 bg-gradient-to-r from-primary/10 via-primary/5 to-blue-500/10 rounded-full blur-md opacity-70 group-hover:opacity-100 transition duration-500" />
+    <div className="relative group w-full max-w-3xl mx-auto">
+      {/* Soft ambient glow that intensifies on focus */}
+      <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 rounded-full blur-xl opacity-40 group-focus-within:opacity-80 transition duration-500 pointer-events-none" />
+      
       <form 
         onSubmit={handleSubmit}
-        className="relative flex items-center bg-background/80 backdrop-blur-2xl border border-border/50 rounded-full shadow-lg overflow-hidden"
+        className="relative flex items-center bg-card/95 backdrop-blur-3xl border border-border rounded-full shadow-lg dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] group-focus-within:border-foreground/30 transition-colors duration-300 overflow-hidden"
       >
+        {/* Inner top edge highlight */}
+        <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.15] to-transparent pointer-events-none opacity-0 dark:opacity-100" />
+        
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask me anything or capture an event..."
-          className="pr-14 py-7 text-[15px] rounded-full bg-transparent border-none focus-visible:ring-0 shadow-none placeholder:text-muted-foreground/70"
+          className="pr-14 py-7 text-[15px] rounded-full bg-transparent border-none focus-visible:ring-0 shadow-none placeholder:text-muted-foreground/50 text-foreground"
           disabled={isLoading}
         />
         <Button 
