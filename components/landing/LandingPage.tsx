@@ -4,9 +4,7 @@ import { HeroSection } from "./hero";
 import { SpotlightSection } from "./sections/SpotlightSection";
 import { HowItWorksSection } from "./sections/HowItWorksSection";
 import { FeaturesGridSection } from "./sections/FeaturesGridSection";
-import { ComparisonSection } from "./sections/ComparisonSection";
 import { PricingSection } from "./sections/PricingSection";
-import { FAQSection } from "./sections/FAQSection";
 import { CTAAndFooterSection } from "./sections/CTAAndFooterSection";
 import { AmbientBackground, LenisProvider } from "./shared";
 
@@ -93,9 +91,7 @@ export function LandingPage() {
           {/* New Sections */}
           <HowItWorksSection />
           <FeaturesGridSection />
-          <ComparisonSection />
           <PricingSection />
-          <FAQSection />
           <CTAAndFooterSection />
         </main>
       </div>
