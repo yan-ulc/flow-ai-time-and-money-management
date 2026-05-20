@@ -408,31 +408,29 @@ export function SpotlightSection({
             {/* Deep Contact Shadow */}
             <motion.div 
               animate={{ 
-                scale: [1, 0.75, 1],
-                opacity: [0.5, 0.2, 0.5],
-                filter: ["blur(16px)", "blur(24px)", "blur(16px)"]
+                scale: [1, 0.85, 1],
+                opacity: [0.5, 0.3, 0.5],
               }}
               transition={{ 
                 duration: 8, 
                 repeat: Infinity, 
                 ease: "easeInOut" 
               }}
-              className="absolute inset-0 bg-black/90 rounded-[100%]"
+              className="absolute inset-0 bg-black/90 rounded-[100%] blur-[20px] will-change-transform"
             />
             
             {/* Color-Matched Ambient Glow */}
             <motion.div 
               animate={{ 
-                scale: [1.4, 1.1, 1.4],
-                opacity: [0.25, 0.1, 0.25],
-                filter: ["blur(32px)", "blur(48px)", "blur(32px)"]
+                scale: [1.4, 1.2, 1.4],
+                opacity: [0.25, 0.15, 0.25],
               }}
               transition={{ 
                 duration: 8, 
                 repeat: Infinity, 
                 ease: "easeInOut" 
               }}
-              className="absolute inset-0 rounded-[100%]"
+              className="absolute inset-0 rounded-[100%] blur-[36px] will-change-transform"
               style={{ backgroundColor: profile.accentColor }}
             />
           </div>
@@ -441,14 +439,18 @@ export function SpotlightSection({
             {...bounceY}
             src={gifPath} 
             alt={headline}
-            className="w-full h-full object-contain brightness-105 contrast-[1.02] relative z-10 drop-shadow-[0_15px_35px_rgba(0,0,0,0.4)]"
+            className="w-full h-full object-contain brightness-105 contrast-[1.02] relative z-10 will-change-transform"
+            style={{ transform: 'translateZ(0)' }}
             loading="lazy"
           />
           
           {/* Atmospheric "Volumetric" Bloom behind content */}
           <div 
-            className="absolute inset-0 z-0 blur-[120px] opacity-20 pointer-events-none"
-            style={{ backgroundColor: profile.accentColor }}
+            className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+            style={{
+              background: `radial-gradient(circle, ${profile.accentColor} 0%, transparent 70%)`,
+              transform: 'scale(1.5)'
+            }}
           />
           </motion.div>
         </div>
