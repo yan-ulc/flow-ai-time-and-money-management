@@ -16,18 +16,17 @@ function RealisticFire({ phase }: { phase: "idle" | "ignition" | "launching" | "
   const isLaunching = phase === "launching";
 
   return (
-    <div className="absolute top-[93%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none" style={{ zIndex: -1 }}>
+    <div className="absolute top-[320px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none" style={{ zIndex: -1 }}>
       {/* Outer Glow (Orange/Red) */}
       <motion.div
         className="absolute origin-top"
         style={{
-          width: 80,
-          background: "linear-gradient(to bottom, rgba(255, 100, 0, 0.8), transparent)",
-          filter: "blur(12px)",
+          width: 120,
+          background: "radial-gradient(ellipse at top, rgba(255, 100, 0, 0.8) 0%, transparent 70%)",
           borderRadius: "50% 50% 100% 100%",
         }}
         animate={{
-          height: isIdle ? 60 : isIgnition ? 180 : isLaunching ? 800 : 0,
+          height: isIdle ? 80 : isIgnition ? 200 : isLaunching ? 900 : 0,
           opacity: isIdle ? 0.3 : isIgnition ? 0.8 : isLaunching ? 1 : 0,
           scaleX: isIdle ? 0.8 : isIgnition ? 1.2 : 0.6,
         }}
@@ -41,13 +40,12 @@ function RealisticFire({ phase }: { phase: "idle" | "ignition" | "launching" | "
       <motion.div
         className="absolute origin-top"
         style={{
-          width: 50,
-          background: "linear-gradient(to bottom, rgba(255, 200, 0, 0.9), transparent)",
-          filter: "blur(6px)",
+          width: 70,
+          background: "radial-gradient(ellipse at top, rgba(255, 200, 0, 0.9) 0%, transparent 70%)",
           borderRadius: "40% 40% 100% 100%",
         }}
         animate={{
-          height: isIdle ? 40 : isIgnition ? 140 : isLaunching ? 600 : 0,
+          height: isIdle ? 50 : isIgnition ? 150 : isLaunching ? 650 : 0,
           opacity: isIdle ? 0.5 : isIgnition ? 1 : isLaunching ? 1 : 0,
           scaleX: isIdle ? [0.9, 1.1, 0.9] : isIgnition ? [0.9, 1.3, 0.9] : 0.5,
         }}
@@ -60,9 +58,8 @@ function RealisticFire({ phase }: { phase: "idle" | "ignition" | "launching" | "
       <motion.div
         className="absolute origin-top"
         style={{
-          width: 24,
-          background: "linear-gradient(to bottom, #ffffff, rgba(200, 230, 255, 0.9), transparent)",
-          filter: "blur(2px)",
+          width: 30,
+          background: "radial-gradient(ellipse at top, #ffffff 0%, rgba(200, 230, 255, 0.9) 30%, transparent 80%)",
           borderRadius: "30% 30% 100% 100%",
         }}
         animate={{
@@ -251,7 +248,6 @@ function HeavySmoke({ phase }: { phase: "idle" | "ignition" | "launching" | "aut
             width: s.size,
             height: s.size,
             background: `radial-gradient(circle, ${s.color} 0%, transparent 60%)`,
-            filter: "blur(24px)",
             translateX: "-50%",
             translateY: "50%",
           }}
@@ -304,7 +300,7 @@ export function CTAAndFooterSection() {
 
   const handleLaunchClick = useCallback(() => {
     if (!isLoaded) return;
-    if (isSignedIn) { router.push("/dashboard"); return; }
+    if (isSignedIn) { router.push("/"); return; }
     if (phase !== "idle") return;
 
     // Trigger Ignition
@@ -553,9 +549,9 @@ export function CTAAndFooterSection() {
                   >
                     {/* Atmospheric glass wrapper for Clerk */}
                     <div className="relative rounded-2xl overflow-hidden p-[1px] bg-gradient-to-b from-white/10 to-white/0 shadow-[0_0_80px_-20px_rgba(255,255,255,0.15)]">
-                      <div className="absolute inset-0 bg-background/40 backdrop-blur-xl z-0" />
-                      <div className="relative z-10 flex justify-center p-4 bg-zinc-950/50 rounded-2xl">
-                         <SignUp routing="hash" signInUrl="/sign-in" forceRedirectUrl="/dashboard" />
+                      <div className="absolute inset-0 bg-zinc-950/90 z-0" />
+                      <div className="relative z-10 flex justify-center p-4 rounded-2xl">
+                         <SignUp routing="hash" signInUrl="/sign-in" forceRedirectUrl="/" />
                       </div>
                     </div>
                   </motion.div>
