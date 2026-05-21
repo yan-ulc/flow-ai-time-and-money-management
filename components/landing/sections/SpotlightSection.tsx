@@ -281,6 +281,33 @@ export function SpotlightSection({
     };
   }, [uid, getGeom, spawnParticle, config.intensity, profile.beamColor]);
 
+  // ─── Animation Hooks ───
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"]
+  });
+
+  const gifScale = useTransform(scrollYProgress, [0.15, 0.45], [0.94, 1]);
+  const gifOpacity = useTransform(scrollYProgress, [0, 0.25, 0.75, 1], [0, 1, 1, 0]);
+  const gifRotate = useTransform(scrollYProgress, [0.1, 0.5], [1.5, 0]);
+  const gifY = useTransform(scrollYProgress, [0, 0.45], [60, 0]);
+  
+  const springScale = useSpring(gifScale, { stiffness: 80, damping: 25 });
+  const springY = useSpring(gifY, { stiffness: 80, damping: 25 });
+  const springRotate = useSpring(gifRotate, { stiffness: 80, damping: 25 });
+
+  const bounceY = useMemo(() => ({
+    animate: { 
+      y: [0, -25, 0],
+      rotate: [-0.5, 0.5, -0.5]
+    },
+    transition: { 
+      duration: 8, 
+      repeat: Infinity, 
+      ease: "easeInOut" as const
+    }
+  }), []);
+
   return (
     <section 
       ref={containerRef}
@@ -367,53 +394,65 @@ export function SpotlightSection({
           )}
           style={{ transform: `translate(${contentOffset}px, ${contentOffsetY}px)` }}
         >
-          <div className="relative w-full max-w-md group perspective-1000">
-            {/* Dynamic Floor Shadow System (CSS Based) */}
-            <div className="absolute -bottom-30 left-1/2 -translate-x-1/2 w-[80%] h-12 pointer-events-none z-0">
-              <div 
-                className="absolute inset-0 bg-black/90 rounded-[100%] blur-[20px] animate-pulse"
-                style={{ animationDuration: '8s' }}
-              />
-              <div 
-                className="absolute inset-0 rounded-[100%] blur-[36px] animate-pulse"
-                style={{ backgroundColor: profile.accentColor, animationDuration: '8s' }}
-              />
-            </div>
-            
-            {/* Native CSS animated image instead of framer-motion useScroll */}
-            <div 
-              className="relative z-10 w-full h-auto will-change-transform"
-              style={{
-                animation: 'float 8s ease-in-out infinite',
-                transformStyle: 'preserve-3d'
+          <motion.div 
+            style={{ 
+              scale: springScale, 
+              y: springY, 
+              opacity: gifOpacity,
+              rotateX: springRotate 
+            }}
+            className="relative w-full max-w-md h-full group perspective-1000"
+          >
+          {/* ─── Dynamic Floor Shadow System ─── */}
+          <div className="absolute -bottom-30 left-1/2 -translate-x-1/2 w-[80%] h-12 pointer-events-none z-0">
+            {/* Deep Contact Shadow */}
+            <motion.div 
+              animate={{ 
+                scale: [1, 0.85, 1],
+                opacity: [0.5, 0.3, 0.5],
               }}
-            >
-              {/* CSS Animation defined in globals.css or injected here */}
-              <style>{`
-                @keyframes float {
-                  0% { transform: translateY(0px) rotateX(-0.5deg); }
-                  50% { transform: translateY(-20px) rotateX(0.5deg); }
-                  100% { transform: translateY(0px) rotateX(-0.5deg); }
-                }
-              `}</style>
-              
-              <img 
-                src={gifPath} 
-                alt={headline}
-                className="w-full h-auto object-contain brightness-105 contrast-[1.02]"
-                style={{ transform: 'translateZ(0)' }}
-                loading="lazy"
-              />
-            </div>
-            
-            <div 
-              className="absolute inset-0 z-0 opacity-20 pointer-events-none"
-              style={{
-                background: `radial-gradient(circle, ${profile.accentColor} 0%, transparent 70%)`,
-                transform: 'scale(1.5)'
+              transition={{ 
+                duration: 8, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
               }}
+              className="absolute inset-0 bg-black/90 rounded-[100%] blur-[20px] will-change-transform"
+            />
+            
+            {/* Color-Matched Ambient Glow */}
+            <motion.div 
+              animate={{ 
+                scale: [1.4, 1.2, 1.4],
+                opacity: [0.25, 0.15, 0.25],
+              }}
+              transition={{ 
+                duration: 8, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+              className="absolute inset-0 rounded-[100%] blur-[36px] will-change-transform"
+              style={{ backgroundColor: profile.accentColor }}
             />
           </div>
+          
+          <motion.img 
+            {...bounceY}
+            src={gifPath} 
+            alt={headline}
+            className="w-full h-full object-contain brightness-105 contrast-[1.02] relative z-10 will-change-transform"
+            style={{ transform: 'translateZ(0)' }}
+            loading="lazy"
+          />
+          
+          {/* Atmospheric "Volumetric" Bloom behind content */}
+          <div 
+            className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+            style={{
+              background: `radial-gradient(circle, ${profile.accentColor} 0%, transparent 70%)`,
+              transform: 'scale(1.5)'
+            }}
+          />
+          </motion.div>
         </div>
 
         {/* Text Content Staging */}
