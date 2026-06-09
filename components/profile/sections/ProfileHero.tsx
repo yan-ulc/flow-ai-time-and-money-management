@@ -71,7 +71,7 @@ export function ProfileHero({
         <div className="hidden lg:block w-full h-px bg-border/50 my-2" />
 
         <div className="flex flex-row flex-wrap items-center justify-center sm:justify-start gap-4 w-full">
-          <p className="text-sm font-medium text-muted-foreground flex items-center gap-2 bg-background/50 px-3 py-1.5 rounded-xl border border-border/40 backdrop-blur-sm">
+          <p className="text-sm font-medium text-primary flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20 backdrop-blur-sm">
             <BrainCircuit className="w-4 h-4 text-primary" />
             <span className="text-foreground font-semibold">AI:</span>
             {userTone.charAt(0).toUpperCase() + userTone.slice(1)} Mode

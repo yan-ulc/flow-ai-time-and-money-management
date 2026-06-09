@@ -21,7 +21,7 @@ export function AICompanionSection({
         <h2 className="text-xl font-semibold tracking-tight">AI Companion</h2>
       </div>
 
-      <div className="rounded-[1.5rem] bg-background border border-border/40 p-6 shadow-sm flex flex-col gap-6">
+      <div className="rounded-[1.5rem] bg-primary/5 border border-primary/20 p-6 shadow-sm flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-base">Personality Matrix</h3>

@@ -2,6 +2,8 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { ToolResponseUI } from "./ToolResponseUI";
 import { User, Sparkles } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface MessageBubbleProps {
   role: "user" | "assistant" | "tool";
@@ -55,7 +57,36 @@ export function MessageBubble({ role, content, toolsUsed, toolResults, onSendMes
               "whitespace-pre-wrap text-[15px] leading-relaxed tracking-tight",
               isUser ? "text-right" : "text-left text-foreground/90"
             )}>
-              {content}
+              {isUser ? (
+                content
+              ) : (
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                    ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
+                    ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 space-y-1" {...props} />,
+                    li: ({node, ...props}) => <li className="" {...props} />,
+                    strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
+                    code: ({node, inline, className, children, ...props}: any) => {
+                      if (inline) {
+                        return (
+                          <code className="bg-secondary/50 px-1 py-0.5 rounded text-[13px] font-mono text-primary" {...props}>
+                            {children}
+                          </code>
+                        );
+                      }
+                      return (
+                        <code className="block bg-secondary/30 p-3 rounded-md text-[13px] font-mono overflow-x-auto my-3 border border-border/50 text-foreground/80" {...props}>
+                          {children}
+                        </code>
+                      );
+                    }
+                  }}
+                >
+                  {content}
+                </ReactMarkdown>
+              )}
             </div>
           )}
         </div>

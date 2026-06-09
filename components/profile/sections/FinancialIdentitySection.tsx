@@ -17,7 +17,7 @@ export function FinancialIdentitySection({ agg }: { agg: ProfileAggregation }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="rounded-[1.5rem] bg-background border border-border/40 p-6 shadow-sm flex flex-col gap-4 group hover:shadow-md hover:border-border/60 transition-all duration-300">
+        <div className="rounded-[1.5rem] bg-primary/5 border border-primary/20 p-6 shadow-sm flex flex-col gap-4 group hover:shadow-md hover:border-primary/40 transition-all duration-300">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Snapshot

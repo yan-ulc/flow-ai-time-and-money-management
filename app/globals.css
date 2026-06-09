@@ -3,7 +3,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.97 0 0);
   --foreground: oklch(0.1450 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.1450 0 0);
@@ -172,60 +172,39 @@
   }
 }
 
-/* Custom Scrollbar - Hidden explicitly */
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Premium Global Scrollbar */
+/* Custom Scrollbar - Hidden globally for a minimalist app-like feel */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(150, 150, 150, 0.2);
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(150, 150, 150, 0.4);
+  display: none;
+  width: 0;
+  height: 0;
 }
 * {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(150, 150, 150, 0.2) transparent;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
-/* Skeuomorphic Stats Dashboard Classes (Black & White High Contrast) */
+/* Theme-aware skeuomorphic cards with subtle primary tint */
 .skeuo-card-base {
   transition: all 0.3s ease;
   border-radius: 1.5rem;
+  background-color: color-mix(in oklch, var(--card) 97%, var(--primary));
+  border: 1px solid var(--border);
+  color: var(--card-foreground);
 }
 
-/* Light mode: Bright white cards on gray bg with strong shadow */
 :root .skeuo-card-base {
-  background-color: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.15);
 }
 
-/* Dark mode: Dark gray cards on pure black bg with white highlight */
 .dark .skeuo-card-base {
-  background-color: #121212;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 color-mix(in oklch, var(--primary) 15%, transparent);
 }
 
-/* Fallback for the previously colored glows to pure neutral white glows */
-.dark .skeuo-glow-emerald,
-.dark .skeuo-glow-zinc,
-.dark .skeuo-glow-amber,
-.dark .skeuo-glow-purple {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 25px -5px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+/* Dynamic theme-aware glows for elements inside the cards */
+.skeuo-glow-emerald,
+.skeuo-glow-zinc,
+.skeuo-glow-amber,
+.skeuo-glow-purple {
+  border: 1px solid color-mix(in oklch, var(--primary) 30%, transparent);
+  box-shadow: 0 0 25px -5px color-mix(in oklch, var(--primary) 20%, transparent), inset 0 1px 0 color-mix(in oklch, var(--primary) 20%, transparent);
 }

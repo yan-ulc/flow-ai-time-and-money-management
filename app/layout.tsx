@@ -3,7 +3,19 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
+
+import "@/components/themes/astro-vista.css";
+import "@/components/themes/claude.css";
+import "@/components/themes/light-green.css";
+import "@/components/themes/mono.css";
+import "@/components/themes/neobrutualism.css";
+import "@/components/themes/notebook.css";
+import "@/components/themes/supabase.css";
+import "@/components/themes/vercel.css";
+import "@/components/themes/whatsapp.css";
+import "@/components/themes/zen.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,12 +53,14 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col">
-        <ClerkProvider>
-          <ConvexClientProvider>
-            {children}
-            <Toaster richColors position="top-center" />
-          </ConvexClientProvider>
-        </ClerkProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <ClerkProvider>
+            <ConvexClientProvider>
+              {children}
+              <Toaster richColors position="top-center" />
+            </ConvexClientProvider>
+          </ClerkProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
