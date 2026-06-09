@@ -21,7 +21,7 @@ export function RecentActivitySection({
         </h2>
       </div>
 
-      <div className="rounded-[1.5rem] bg-background border border-border/40 p-6 shadow-sm flex-1">
+      <div className="rounded-[1.5rem] bg-primary/5 border border-primary/20 p-6 shadow-sm flex-1">
         <div className="flex flex-col relative before:absolute before:inset-y-2 before:left-3.5 before:w-px before:bg-border/60 gap-8">
           {activityFeed.length === 0 ? (
             <p className="text-sm text-muted-foreground pl-12">

@@ -16,7 +16,7 @@ function RealisticFire({ phase }: { phase: "idle" | "ignition" | "launching" | "
   const isLaunching = phase === "launching";
 
   return (
-    <div className="absolute top-[320px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none" style={{ zIndex: -1 }}>
+    <div className="absolute top-[calc(94%-15px)] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none" style={{ zIndex: 20 }}>
       {/* Outer Glow (Orange/Red) */}
       <motion.div
         className="absolute origin-top"
@@ -300,21 +300,27 @@ export function CTAAndFooterSection() {
 
   const handleLaunchClick = useCallback(() => {
     if (!isLoaded) return;
-    if (isSignedIn) { router.push("/"); return; }
     if (phase !== "idle") return;
 
     // Trigger Ignition
     setPhase("ignition");
     
-    // Trigger Launch after thrust builds up
+    // Trigger Launch after thrust buildbrs up
     after(1500, () => {
       setPhase("launching");
     });
 
-    // Reveal Auth Panel after rocket has exited
-    after(2800, () => {
-      setPhase("auth");
-    });
+    if (isSignedIn) {
+      // Redirect to app after rocket has exited
+      after(2800, () => {
+        router.push("/app");
+      });
+    } else {
+      // Reveal Auth Panel after rocket has exited
+      after(2800, () => {
+        setPhase("auth");
+      });
+    }
   }, [isSignedIn, isLoaded, phase, router]);
 
   // Cursor reactive background light
@@ -487,8 +493,8 @@ export function CTAAndFooterSection() {
               <AnimatePresence>
                 {phase !== "auth" && (
                   <motion.div
-                    className="absolute bottom-0 w-36 md:w-48 z-10"
-                    style={{ height: "480px" }}
+                    className="absolute bottom-[60px] w-36 md:w-48 z-10"
+                    style={{ aspectRatio: "240/420" }}
                     initial={{ y: 50, opacity: 0 }}
                     whileInView={{ y: 0, opacity: 1 }}
                     viewport={{ once: true }}

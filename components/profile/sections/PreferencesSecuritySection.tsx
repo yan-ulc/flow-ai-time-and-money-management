@@ -13,13 +13,10 @@ import { itemVariants } from "../motionVariants";
 import { SettingRow } from "../ui/SettingRow";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
 
-export function PreferencesSecuritySection({
-  isDarkMode,
-  onToggleTheme,
-}: {
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
-}) {
+import { Palette } from "lucide-react";
+import { ThemeSelectorDialog } from "../ui/ThemeSelectorDialog";
+
+export function PreferencesSecuritySection() {
   return (
     <motion.div
       variants={itemVariants}
@@ -29,13 +26,17 @@ export function PreferencesSecuritySection({
         <h2 className="text-xl font-semibold tracking-tight px-1">
           App Preferences
         </h2>
-        <div className="rounded-[1.5rem] bg-background border border-border/40 overflow-hidden flex flex-col shadow-sm">
-          <SettingRow
-            icon={isDarkMode ? Moon : Sun}
-            title={isDarkMode ? "Dark Mode" : "Light Mode"}
-            desc="Interface theme"
-            action={<ToggleSwitch isOn={isDarkMode} onToggle={onToggleTheme} />}
-          />
+        <div className="rounded-[1.5rem] bg-primary/5 border border-primary/20 overflow-hidden flex flex-col shadow-sm">
+          <ThemeSelectorDialog>
+            <button className="w-full text-left">
+              <SettingRow
+                icon={Palette}
+                title="Appearance"
+                desc="Theme and Light/Dark mode"
+                action={<ChevronRight className="w-4 h-4 text-muted-foreground" />}
+              />
+            </button>
+          </ThemeSelectorDialog>
           <div className="h-px bg-border/40" />
           <SettingRow
             icon={Bell}
@@ -50,7 +51,7 @@ export function PreferencesSecuritySection({
         <h2 className="text-xl font-semibold tracking-tight px-1">
           Data & Security
         </h2>
-        <div className="rounded-[1.5rem] bg-background border border-border/40 overflow-hidden flex flex-col shadow-sm">
+        <div className="rounded-[1.5rem] bg-primary/5 border border-primary/20 overflow-hidden flex flex-col shadow-sm">
           <SettingRow
             icon={DownloadCloud}
             title="Export Data"

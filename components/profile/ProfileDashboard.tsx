@@ -28,18 +28,7 @@ export function ProfileDashboard() {
   );
   const updateSettings = useMutation(api.users.updateUserSettings);
 
-  const [isDarkMode, setIsDarkMode] = React.useState(false);
 
-  React.useEffect(() => {
-    setIsDarkMode(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  const toggleTheme = () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    if (newMode) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-  };
 
   const handleToneChange = async (tone: UserTone) => {
     if (!dbUser) return;
@@ -79,8 +68,6 @@ export function ProfileDashboard() {
         agg={agg}
         userTone={userTone}
         onToneChange={handleToneChange}
-        isDarkMode={isDarkMode}
-        onToggleTheme={toggleTheme}
       />
     </motion.div>
   );
